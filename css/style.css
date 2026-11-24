@@ -568,6 +568,48 @@ tr:hover td { background: #FBF7EC; }
   .admin-card-title { font-size: 1rem; }
 }
 
+/* ---------- 回到最上面 ---------- */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(95, 125, 92, 0.35);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: opacity 0.25s, transform 0.25s, background 0.15s;
+  padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.scroll-top-btn.show {
+  opacity: 0.95;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.scroll-top-btn:hover {
+  background: var(--primary-dark);
+  opacity: 1;
+}
+.scroll-top-btn:active { transform: scale(0.92); }
+/* 前台有底部結帳條時往上讓位 */
+body[data-page="front"] .scroll-top-btn { bottom: 90px; }
+@media (max-width: 480px) {
+  .scroll-top-btn { width: 44px; height: 44px; font-size: 1.4rem; bottom: 16px; right: 16px; }
+  body[data-page="front"] .scroll-top-btn { bottom: 86px; }
+}
+@media print { .scroll-top-btn { display: none !important; } }
+
 /* ---------- 列印 (@media print) ---------- */
 @media print {
   @page { size: A4; margin: 15mm; }
