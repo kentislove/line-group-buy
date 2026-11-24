@@ -207,18 +207,54 @@ document.getElementById('submitOrderBtn').onclick = async () => {
       weekId: state.weekId, customerName: name, phone, note, items
     });
     const total = items.reduce((a,b)=>a+b.subtotal,0);
-    const summary = `${window.APP_CONFIG.OWNER_LINE_SHARE_PREFIX}\n訂單 ${res.orderId}\n${items.map(i=>`・${i.name} x${i.qty} = $${i.subtotal}`).join('\n')}\n合計 $${total}`;
-    const shareUrl = 'https://line.me/R/share?text=' + encodeURIComponent(summary);
-    if (confirm('下單成功！要把訂單明細分享到你的 LINE 嗎？')) {
-      window.open(shareUrl, '_blank');
-    }
+    const summary = `${window.APP_CONFIG.OWNER_LINE_SHARE_PREFIX}\n訂單 ${res.orderId}\n購買人：${name}${phone?' ('+phone+')':''}\n${items.map(i=>`・${i.name} x${i.qty} = $${i.subtotal}`).join('\n')}\n合計 $${total}`;
+    showSuccessModal(res.orderId, total, summary);
     state.cart = {};
-    closeModal();
     render();
   } catch (e) {
     alert('送單失敗：' + e.message);
   } finally {
     btn.disabled = false; btn.textContent = '確認送出';
+  }
+};
+
+function showSuccessModal(orderId, total, summary) {
+  closeModal();
+  const shareText = encodeURIComponent(summary);
+  // 兩種 LINE 分享 URL，都塞進去讓它自己挑
+  const shareUrlA = 'https://line.me/R/share?text=' + shareText;
+  const shareUrlB = 'https://line.me/R/msg/text/?' + shareText;
+  const html = `
+    <div id="successOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;">
+      <div style="background:#FFFEFB;border-radius:20px;padding:24px;max-width:420px;width:100%;box-shadow:0 8px 28px rgba(0,0,0,0.2);text-align:center;animation:slideUp 0.25s;">
+        <div style="font-size:3rem;">🎉</div>
+        <h2 style="margin:8px 0;color:#2B2824;font-family:'Noto Serif TC',serif;">下單成功</h2>
+        <div style="color:#8A8679;font-size:0.85rem;margin-bottom:12px;">訂單編號 ${orderId}</div>
+        <div style="background:#F5EDE0;border-radius:12px;padding:12px;font-size:0.9rem;text-align:left;white-space:pre-wrap;max-height:200px;overflow-y:auto;font-family:monospace;color:#3D3B37;">${summary}</div>
+        <div style="margin-top:14px;font-size:1.3rem;color:#5F7D5C;font-family:'Noto Serif TC',serif;font-weight:700;">合計 $${total}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px;">
+          <a href="${shareUrlA}" target="_blank" rel="noopener" class="btn" style="background:#06C755;text-decoration:none;display:block;text-align:center;">📲 分享到 LINE</a>
+          <button class="btn btn-ghost" onclick="copyOrder(\`${summary.replace(/`/g,'\\\`')}\`)">📋 複製訂單明細</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('successOverlay').remove()" style="border-color:#C67B6A;color:#C67B6A;">關閉</button>
+        </div>
+        <div style="font-size:0.75rem;color:#8A8679;margin-top:12px;">※ 手機點「分享到 LINE」會直接開 LINE；電腦會打開 LINE 網頁版</div>
+      </div>
+    </div>`;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  document.body.appendChild(wrap);
+}
+
+window.copyOrder = async function(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('訂單明細已複製！貼到 LINE 給團購主即可');
+  } catch (e) {
+    // 退一步：用傳統 textarea 複製
+    const t = document.createElement('textarea');
+    t.value = text; document.body.appendChild(t); t.select();
+    document.execCommand('copy'); t.remove();
+    alert('訂單明細已複製！');
   }
 };
 
