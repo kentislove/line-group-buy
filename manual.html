@@ -55,7 +55,6 @@
       <li><a href="#schedule">每週排班勾選</a></li>
       <li><a href="#order">查看訂單</a></li>
       <li><a href="#report">報表、列印、匯出</a></li>
-      <li><a href="#settings">系統設定（修改網站名稱等）</a></li>
       <li><a href="#faq">常見問題</a></li>
     </ol>
   </div>
@@ -64,14 +63,9 @@
     <h2>1. 登入</h2>
     <p>網址：<code>https://kentislove.github.io/line-group-buy/admin.html</code></p>
     <ol>
-      <li>密碼有兩組：
-        <ul>
-          <li><b>超級管理者</b>：系統設定、密碼都看得到</li>
-          <li><b>管理者（團購主）</b>：日常用，看不到系統設定</li>
-        </ul>
-      </li>
-      <li>輸入密碼後按「登入」。瀏覽器會記住，下次打開就不用再輸入</li>
-      <li>要換帳號或退出 → 右上角「登出」</li>
+      <li>輸入密碼後按「登入」</li>
+      <li>瀏覽器會記住，下次打開就不用再輸入</li>
+      <li>要換人用或退出 → 右上角「登出」</li>
     </ol>
   </div>
 
@@ -216,39 +210,8 @@
     <div class="tip">CSV 可以直接丟給店家或會計整理。</div>
   </div>
 
-  <div class="manual-card" id="settings">
-    <h2>9. 系統設定</h2>
-    <p>進 ⚙️ 系統設定 分頁。<b>只有超級管理者看得到。</b></p>
-
-    <table class="tbl">
-      <tr><th>項目</th><th>意思</th></tr>
-      <tr><td><code>site_title</code></td><td>網站主標題（前台 header 顯示）</td></tr>
-      <tr><td><code>site_subtitle</code></td><td>副標題（保留，未來用）</td></tr>
-      <tr><td><code>share_prefix</code></td><td>客人分享到 LINE 時訊息的開頭</td></tr>
-      <tr><td><code>super_admin_password</code></td><td>超級管理者密碼</td></tr>
-      <tr><td><code>admin_password</code></td><td>管理者密碼（團購主用）</td></tr>
-      <tr><td><code>line_channel_access_token</code></td><td>LINE 官方帳號 token（進階，付費版用）</td></tr>
-      <tr><td><code>line_notify_to</code></td><td>LINE 推播對象 userId（進階）</td></tr>
-    </table>
-
-    <h3>修改網站名稱</h3>
-    <ol>
-      <li>點 <code>site_title</code> 卡片的「編輯」</li>
-      <li>改「內容」欄位</li>
-      <li>按「儲存」。前台重整就會看到新名稱</li>
-    </ol>
-
-    <h3>修改密碼</h3>
-    <ol>
-      <li>點 <code>super_admin_password</code> 或 <code>admin_password</code> 卡片的「編輯」</li>
-      <li>改「內容」欄位 → 儲存</li>
-      <li>下次登入用新密碼</li>
-    </ol>
-    <div class="warn">密碼改了之後，記得通知另一位使用者。忘記密碼要直接打開試算表才能看到。</div>
-  </div>
-
   <div class="manual-card" id="faq">
-    <h2>10. 常見問題</h2>
+    <h2>9. 常見問題</h2>
 
     <div class="q">Q1：前台進去看不到任何商家？</div>
     <div class="a">去「週期與排班」確認：有沒有建立本週的週期？本週的商家和攤位有沒有勾起來？</div>
@@ -273,9 +236,6 @@
 
     <div class="q">Q8：下單截止時間要改？</div>
     <div class="a">去「週期與排班」→ 編輯那個週期 → 改「下單截止」時間。</div>
-
-    <div class="q">Q9：忘記超級管理者密碼？</div>
-    <div class="a">直接打開 Google 試算表（LINE團購代購-資料庫）→ Settings 分頁 → 看 <code>super_admin_password</code> 那一列的值。</div>
   </div>
 
   <a href="admin.html" class="btn btn-ghost" style="margin-top:20px;">← 回到後台</a>
