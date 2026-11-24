@@ -57,6 +57,10 @@ function readAll(name) {
       const v = row[i];
       if (v instanceof Date) {
         obj[h] = Utilities.formatDate(v, 'Asia/Taipei', 'yyyy-MM-dd HH:mm:ss');
+      } else if (h === 'phone' && typeof v === 'number') {
+        // 試算表自動把 0912345678 當數字→補回前 0
+        const s = String(v);
+        obj[h] = (s.length === 9) ? '0' + s : s;
       } else {
         obj[h] = v;
       }
@@ -143,7 +147,10 @@ function submitOrder(p) {
     orderId, weekId, p.customerName, p.phone || '',
     it.itemId, it.qty, it.subtotal, now, p.note || ''
   ]);
-  sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  const startRow = sh.getLastRow() + 1;
+  // 先把 phone 欄（col 4）設為文字格式，避免 0912… 被存成數字 912…
+  sh.getRange(startRow, 4, rows.length, 1).setNumberFormat('@');
+  sh.getRange(startRow, 1, rows.length, rows[0].length).setValues(rows);
 
   try { pushLineToOwner(p, orderId); } catch (e) {}
   return { orderId };
@@ -373,6 +380,35 @@ function uploadImage(p) {
   const id = file.getId();
   // 用 lh3 googleusercontent 格式最穩（避免 thumbnail 的 CORS/rate limit）
   return { url: 'https://lh3.googleusercontent.com/d/' + id + '=w800', fileId: id };
+}
+
+// ---------- v1.5 遷移：Orders 電話欄位改成文字格式 + 補回被吃掉的 0 ----------
+function migrateSchema_v1_5() {
+  const sh = SS.getSheetByName('Orders');
+  if (!sh) return '⚠️ 找不到 Orders 分頁';
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const phoneIdx = headers.indexOf('phone');
+  if (phoneIdx === -1) return '⚠️ Orders 找不到 phone 欄';
+  const col = phoneIdx + 1;
+  // 1. 整欄設文字格式
+  sh.getRange(1, col, sh.getMaxRows(), 1).setNumberFormat('@');
+  // 2. 掃現有列，把被吃掉 0 的電話補回去
+  const rows = sh.getLastRow();
+  let fixed = 0;
+  if (rows > 1) {
+    const rng = sh.getRange(2, col, rows - 1, 1);
+    const vals = rng.getValues();
+    const newVals = vals.map(([v]) => {
+      if (typeof v === 'number' && !isNaN(v)) {
+        const s = String(v);
+        if (s.length === 9) { fixed++; return ['0' + s]; }
+        return [s];
+      }
+      return [v];
+    });
+    rng.setValues(newVals);
+  }
+  return `🎉 Orders 電話欄位處理完成\n✅ 整欄已改文字格式\n✅ 補回 ${fixed} 筆被吃 0 的電話`;
 }
 
 // ---------- v1.4 遷移：Vendors 加 fee_type（flat/percent） ----------

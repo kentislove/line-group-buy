@@ -568,6 +568,36 @@ tr:hover td { background: #FBF7EC; }
   .admin-card-title { font-size: 1rem; }
 }
 
+/* ---------- 列印 (@media print) ---------- */
+@media print {
+  @page { size: A4; margin: 15mm; }
+  body {
+    background: #fff !important;
+    padding: 0 !important;
+    color: #000;
+    font-family: "Noto Sans TC", sans-serif;
+  }
+  header, .tabs, .btn, .logout-btn, .header-tools, .no-print,
+  #loading, .modal, .banner-illustration { display: none !important; }
+  .container { max-width: none !important; padding: 0 !important; }
+  .card, .report-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    border-radius: 6px !important;
+    background: #fff !important;
+    page-break-inside: avoid;
+  }
+  .report-print-head { display: block !important; }
+  .report-customer { page-break-inside: avoid; }
+  .report-table { border-collapse: collapse; }
+  .report-table th, .report-table td {
+    border: 1px solid #ddd;
+    padding: 5px 8px;
+  }
+  .report-table th { background: #f5f5f5; }
+  h2, h3 { color: #000; }
+}
+
 /* ---------- 空狀態 ---------- */
 .empty-state {
   text-align: center; padding: 40px 20px;

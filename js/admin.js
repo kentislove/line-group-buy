@@ -592,26 +592,93 @@ async function renderReport(el) {
   try {
     const r = await API.call('adminReport', { token });
     hideLoading();
-    let html = `<div class="card"><h3>📊 本週報表（${r.weekId}）</h3>`;
-    if (!r.customers.length) html += '<p>本週尚無訂單</p>';
+    window._lastReport = r; // 暫存給匯出用
+    const grandTotal = r.customers.reduce((a,c)=>a+c.total,0);
+    let html = `<div class="card report-card">
+      <div class="report-head no-print" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <h3 style="margin:0;">📊 本週報表 <small style="color:#888;font-weight:normal;">(${r.weekId})</small></h3>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn" onclick="printReport()">🖨️ 列印 / 存 PDF</button>
+          <button class="btn btn-ghost" onclick="exportReportCsv()">📊 匯出 Excel</button>
+        </div>
+      </div>
+      <div class="report-print-head" style="display:none;text-align:center;margin-bottom:16px;">
+        <h2 style="margin:4px 0;">本週團購訂單報表</h2>
+        <div style="color:#666;">週期：${r.weekId}　列印時間：${new Date().toLocaleString('zh-TW')}</div>
+      </div>`;
+    if (!r.customers.length) { html += '<p style="color:#888;padding:20px;text-align:center;">本週尚無訂單</p>'; }
     r.customers.forEach(c => {
-      html += `<div style="margin-top:12px;border-top:1px dashed #ccc;padding-top:8px;">
-        <b>${c.name}</b> ${c.phone ? `<span style="color:#888;">(${c.phone})</span>` : ''}
-        <table style="margin-top:6px;">
-          <thead><tr><th>訂單</th><th>來源</th><th>品項</th><th>數量</th><th>小計</th></tr></thead>
+      html += `<div class="report-customer" style="margin-top:14px;border-top:1px dashed #ccc;padding-top:10px;">
+        <div style="font-weight:700;font-size:1.05rem;">
+          ${c.name}
+          ${c.phone ? `<span style="color:#666;font-weight:400;margin-left:8px;">📞 ${c.phone}</span>` : ''}
+        </div>
+        <table class="report-table" style="margin-top:8px;width:100%;">
+          <thead><tr><th>來源</th><th>品項</th><th style="text-align:right;">數量</th><th style="text-align:right;">小計</th></tr></thead>
           <tbody>
-          ${c.rows.map(x => `<tr><td>${x.orderId}</td><td>${x.source}</td><td>${x.itemName}</td><td>${x.qty}</td><td>$${x.subtotal}</td></tr>`).join('')}
+          ${c.rows.map(x => `<tr>
+            <td style="color:#666;font-size:0.88rem;">${x.source}</td>
+            <td>${x.itemName}</td>
+            <td style="text-align:right;">${x.qty}</td>
+            <td style="text-align:right;">$${x.subtotal}</td>
+          </tr>`).join('')}
           </tbody>
         </table>
-        <div style="text-align:right;margin-top:4px;"><b>個人總計：<span style="color:#06C755;font-size:1.1rem;">$${c.total}</span></b></div>
+        <div style="text-align:right;margin-top:6px;font-weight:700;">
+          個人總計：<span style="color:#5F7D5C;font-size:1.15rem;">$${c.total}</span>
+        </div>
       </div>`;
     });
+    if (r.customers.length) {
+      html += `<div style="margin-top:18px;padding-top:12px;border-top:2px solid #5F7D5C;text-align:right;font-weight:800;font-size:1.1rem;">
+        🧾 本週總營收：<span style="color:#5F7D5C;font-size:1.4rem;">$${grandTotal}</span>
+      </div>`;
+    }
     html += '</div>';
     el.innerHTML = html;
   } catch (e) {
     hideLoading();
     el.innerHTML = `<div class="card" style="color:#e74c3c">載入失敗：${e.message}</div>`;
   }
+}
+
+window.printReport = function() {
+  window.print();
+};
+
+window.exportReportCsv = function() {
+  const r = window._lastReport;
+  if (!r) return alert('沒有報表資料');
+  // 欄位順序：週期, 客人, 電話, 來源, 品項, 數量, 小計, 個人總計
+  const lines = [['週期','客人','電話','來源','品項','數量','小計','個人總計'].join(',')];
+  r.customers.forEach(c => {
+    const phone = String(c.phone || '');
+    c.rows.forEach((row, idx) => {
+      lines.push([
+        r.weekId, csvEsc(c.name), csvEsc(phone),
+        csvEsc(row.source), csvEsc(row.itemName),
+        row.qty, row.subtotal,
+        idx === c.rows.length - 1 ? c.total : ''
+      ].join(','));
+    });
+  });
+  const grand = r.customers.reduce((a,c)=>a+c.total,0);
+  lines.push(['','','','','','','本週總營收', grand].join(','));
+  const bom = '﻿'; // Excel 認得的 UTF-8 BOM
+  const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `團購報表_${r.weekId}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+function csvEsc(v) {
+  if (v == null) return '';
+  const s = String(v);
+  // 電話欄位尤其要保 0 → 加 =""... Excel 才不會把 0912 當數字
+  if (/^0\d{8,}$/.test(s)) return `="${s}"`;
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+  return s;
 }
 
 // ---------- ⚙️ 系統設定 ----------
