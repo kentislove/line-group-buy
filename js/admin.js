@@ -214,7 +214,7 @@ function renderWeekSchedule(weekId) {
   const vHtml = vendors.length
     ? vendors.map(v => `<div class="checkbox-row">
         <input type="checkbox" id="wv_${v.vendor_id}" ${activeV.has(v.vendor_id)?'checked':''}>
-        <label for="wv_${v.vendor_id}">${v.name}${(v.has_fee===true||v.has_fee==='TRUE')?` <span class="tag fee">代購費 $${v.fee_amount}</span>`:''}</label>
+        <label for="wv_${v.vendor_id}">${v.name}${(v.has_fee===true||v.has_fee==='TRUE')?` <span class="tag fee">代購費 ${v.fee_type==='percent' ? v.fee_amount + '%' : '$' + v.fee_amount}</span>`:''}</label>
       </div>`).join('')
     : '<div style="color:#888;padding:8px;">尚無代購商家，請先在「代購商家」分頁新增</div>';
 
@@ -600,7 +600,7 @@ function renderOrders(el) {
     let src = '';
     if (it.parent_type === 'vendor') src = vMap[it.parent_id]?.name || '?';
     else if (it.parent_type === 'stall') src = sMap[it.parent_id]?.name || '?';
-    groups[o.order_id].rows.push({ name: it.name || o.item_id, qty: o.qty, subtotal: o.subtotal, src });
+    groups[o.order_id].rows.push({ name: it.name || feeName(o.item_id), qty: o.qty, subtotal: o.subtotal, src });
     groups[o.order_id].total += Number(o.subtotal || 0);
   });
 
@@ -669,7 +669,7 @@ async function renderReport(el) {
           <tbody>
           ${c.rows.map(x => `<tr>
             <td style="color:#666;font-size:0.88rem;">${x.source}</td>
-            <td>${x.itemName}</td>
+            <td>${feeName(x.itemName)}</td>
             <td style="text-align:right;">${x.qty}</td>
             <td style="text-align:right;">$${x.subtotal}</td>
           </tr>`).join('')}
@@ -704,7 +704,7 @@ window.printReport = function() {
       <div class="cust-head"><b>${c.name}</b>${c.phone ? ` <span class="phone">📞 ${c.phone}</span>` : ''}</div>
       <table>
         <thead><tr><th>來源</th><th>品項</th><th class="r">數量</th><th class="r">小計</th></tr></thead>
-        <tbody>${c.rows.map(x => `<tr><td class="src">${x.source}</td><td>${x.itemName}</td><td class="r">${x.qty}</td><td class="r">$${x.subtotal}</td></tr>`).join('')}</tbody>
+        <tbody>${c.rows.map(x => `<tr><td class="src">${x.source}</td><td>${feeName(x.itemName)}</td><td class="r">${x.qty}</td><td class="r">$${x.subtotal}</td></tr>`).join('')}</tbody>
       </table>
       <div class="sub">個人總計 <b>$${c.total}</b></div>
     </div>`).join('');
@@ -772,7 +772,7 @@ window.exportReportCsv = function() {
     c.rows.forEach((row, idx) => {
       lines.push([
         r.weekId, csvEsc(c.name), csvEsc(phone),
-        csvEsc(row.source), csvEsc(row.itemName),
+        csvEsc(row.source), csvEsc(feeName(row.itemName)),
         row.qty, row.subtotal,
         idx === c.rows.length - 1 ? c.total : ''
       ].join(','));
@@ -858,6 +858,14 @@ window.delRow = async function(sheet, id) {
   } catch (e) { alert(e.message); }
   finally { hideLoading(); }
 };
+
+// 訂單裡的代購費是一筆 __FEE_商家代碼 的明細，顯示時換成「商家名 代購費」
+function feeName(s) {
+  const m = /^__FEE_(.+)$/.exec(String(s || ''));
+  if (!m) return s;
+  const v = (cache.vendors || []).find(x => x.vendor_id === m[1]);
+  return (v ? v.name + ' ' : '') + '代購費';
+}
 
 function fmtOnly(d) {
   if (!d) return '—';
