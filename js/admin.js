@@ -243,31 +243,69 @@ function renderParents(el, type) {
   const title = isVendor ? '🛒 代購商家' : '🏪 現場攤位';
   const cols = Object.keys(FIELD_META[sheet]);
 
-  // 若使用者正鑽入某個商家/攤位看商品
   if (drillParent && drillParent.type === type) {
     return renderItemsOfParent(el, type);
   }
 
   let html = `<div class="card">
     <h3>${title} <span style="font-size:0.75rem;color:#888;font-weight:normal;">(${list.length} 筆)</span></h3>
-    <div style="color:#666;font-size:0.85rem;margin-bottom:8px;">※ 這裡是「永久清單」。要排哪一週有出現，去 📅 週期與排班 分頁勾選。</div>
+    <div style="color:#666;font-size:0.85rem;margin-bottom:10px;">※ 這裡是「永久清單」。要排哪一週有出現，去 📅 週期與排班 分頁勾選。</div>
     <button class="btn" onclick='openForm("${sheet}", ${JSON.stringify(cols).replace(/"/g,'&quot;')})'>➕ 新增${isVendor?'商家':'攤位'}</button>
-    <div style="overflow-x:auto;margin-top:12px;"><table>
-      <thead><tr>${cols.map(c => `<th>${label(sheet, c)}</th>`).join('')}<th>商品</th><th>操作</th></tr></thead>
-      <tbody>`;
+    <div class="admin-list">`;
+
+  if (!list.length) {
+    html += `<div class="empty-state"><span class="icon">📭</span>尚無${isVendor?'商家':'攤位'}，請先按「新增」</div>`;
+  }
+
   list.forEach(r => {
     const itemCount = (cache.items || []).filter(it => it.parent_type === type && it.parent_id === r[idKey]).length;
-    html += `<tr>
-      ${cols.map(c => `<td>${formatCell(translateValue(c, r[c]))}</td>`).join('')}
-      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:0.8rem;" onclick="drillIn('${type}','${r[idKey]}','${(r.name||'').replace(/'/g,'')}')">管理商品 (${itemCount})</button></td>
-      <td>
-        <button class="btn btn-ghost" style="padding:4px 10px;font-size:0.8rem;" onclick='openForm("${sheet}", ${JSON.stringify(cols).replace(/"/g,'&quot;')}, ${JSON.stringify(r).replace(/'/g,"&#39;")})'>編輯</button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:0.8rem;" onclick="delRow('${sheet}','${r[idKey]}')">刪</button>
-      </td>
-    </tr>`;
+    html += `<div class="admin-card">
+      <div class="admin-card-head">
+        ${r.image_url ? `<img src="${r.image_url}" class="admin-card-img" referrerpolicy="no-referrer">` : `<div class="admin-card-img placeholder">${isVendor?'🛒':'🏪'}</div>`}
+        <div class="admin-card-title">${r.name || '(未命名)'}</div>
+      </div>
+      <dl class="admin-fields">
+        ${cols.filter(c => c !== 'name' && c !== 'image_url').map(c => `
+          <div class="field-row">
+            <dt>${label(sheet, c)}<small>${describeField(sheet, c)}</small></dt>
+            <dd>${formatCell(translateValue(c, r[c])) || '<span style="color:#bbb;">—</span>'}</dd>
+          </div>`).join('')}
+      </dl>
+      <div class="admin-card-actions">
+        <button class="btn" onclick="drillIn('${type}','${r[idKey]}','${(r.name||'').replace(/'/g,'')}')">📦 管理商品 (${itemCount})</button>
+        <button class="btn btn-ghost" onclick='openForm("${sheet}", ${JSON.stringify(cols).replace(/"/g,'&quot;')}, ${JSON.stringify(r).replace(/'/g,"&#39;")})'>✏️ 編輯</button>
+        <button class="btn btn-danger" onclick="delRow('${sheet}','${r[idKey]}')">🗑 刪除</button>
+      </div>
+    </div>`;
   });
-  html += '</tbody></table></div></div>';
+  html += '</div></div>';
   el.innerHTML = html;
+}
+
+// 欄位附註：告訴使用者這欄位是什麼
+function describeField(sheet, col) {
+  const map = {
+    Vendors: {
+      vendor_id: '系統自動產生',
+      has_fee: '',
+      fee_amount: '',
+      fee_type: '',
+      active: ''
+    },
+    Stalls: {
+      stall_id: '系統自動產生',
+      active: ''
+    },
+    Items: {
+      item_id: '系統自動產生',
+      parent_type: '',
+      parent_id: '',
+      price: '元',
+      unit: '',
+      active: ''
+    }
+  };
+  return (map[sheet] && map[sheet][col]) ? ` <span style="color:#bbb;">(${map[sheet][col]})</span>` : '';
 }
 window.drillIn = function(type, id, name) {
   drillParent = { type, id, name };
@@ -278,27 +316,40 @@ function renderItemsOfParent(el, type) {
   const parentLabel = type === 'vendor' ? '代購商家' : '現場攤位';
   const items = (cache.items || []).filter(it => it.parent_type === type && it.parent_id === drillParent.id);
   const cols = Object.keys(FIELD_META.Items);
-  const displayCols = cols.filter(c => c !== 'parent_type' && c !== 'parent_id'); // 不顯示在表格，但 openForm 仍要帶
+  const displayCols = cols.filter(c => !['parent_type','parent_id','name','image_url'].includes(c));
 
   let html = `<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
       <h3>📦 ${drillParent.name} 的商品 <span style="font-size:0.75rem;color:#888;font-weight:normal;">(${items.length} 筆)</span></h3>
       <button class="btn btn-ghost" onclick="drillParent=null; renderTab();">← 回${parentLabel}清單</button>
     </div>
     <button class="btn" onclick='openItemForm()'>➕ 新增商品</button>
-    <div style="overflow-x:auto;margin-top:12px;"><table>
-      <thead><tr>${displayCols.map(c => `<th>${label('Items', c)}</th>`).join('')}<th>操作</th></tr></thead>
-      <tbody>`;
+    <div class="admin-list">`;
+
+  if (!items.length) {
+    html += `<div class="empty-state"><span class="icon">📦</span>尚無商品，請按「新增商品」</div>`;
+  }
+
   items.forEach(it => {
-    html += `<tr>
-      ${displayCols.map(c => `<td>${formatCell(translateValue(c, it[c]))}</td>`).join('')}
-      <td>
-        <button class="btn btn-ghost" style="padding:4px 10px;font-size:0.8rem;" onclick='openItemForm(${JSON.stringify(it).replace(/'/g,"&#39;")})'>編輯</button>
-        <button class="btn btn-danger" style="padding:4px 10px;font-size:0.8rem;" onclick="delRow('Items','${it.item_id}')">刪</button>
-      </td>
-    </tr>`;
+    html += `<div class="admin-card">
+      <div class="admin-card-head">
+        ${it.image_url ? `<img src="${it.image_url}" class="admin-card-img" referrerpolicy="no-referrer">` : `<div class="admin-card-img placeholder">📦</div>`}
+        <div class="admin-card-title">${it.name || '(未命名)'}</div>
+      </div>
+      <dl class="admin-fields">
+        ${displayCols.map(c => `
+          <div class="field-row">
+            <dt>${label('Items', c)}<small>${describeField('Items', c)}</small></dt>
+            <dd>${formatCell(translateValue(c, it[c])) || '<span style="color:#bbb;">—</span>'}</dd>
+          </div>`).join('')}
+      </dl>
+      <div class="admin-card-actions">
+        <button class="btn btn-ghost" onclick='openItemForm(${JSON.stringify(it).replace(/'/g,"&#39;")})'>✏️ 編輯</button>
+        <button class="btn btn-danger" onclick="delRow('Items','${it.item_id}')">🗑 刪除</button>
+      </div>
+    </div>`;
   });
-  html += '</tbody></table></div></div>';
+  html += '</div></div>';
   el.innerHTML = html;
 }
 
@@ -537,21 +588,44 @@ function renderSettings(el) {
   }
   const rows = cache.settings || [];
   const cols = ['key', 'value'];
+  const descriptions = {
+    super_admin_password: '超級管理者密碼（您用的）',
+    admin_password: '管理者密碼（團購主用的）',
+    line_channel_access_token: 'LINE Messaging API token（進階，付費版用）',
+    line_notify_to: 'LINE 官方帳號接收者 userId（進階）',
+    site_title: '網站主標題（會顯示在前台 header）',
+    site_subtitle: '網站副標題（保留，未來使用）',
+    share_prefix: '客人分享到 LINE 時的訊息開頭'
+  };
   let html = `<div class="card">
     <h3>⚙️ 系統設定</h3>
-    <div style="color:#666;font-size:0.85rem;margin-bottom:8px;">※ 已存在的項目（密碼、LINE token 等）只建議「編輯」不建議刪除或新增。</div>
-    <table>
-      <thead><tr>${cols.map(c => `<th>${label('Settings', c)}</th>`).join('')}<th>操作</th></tr></thead>
-      <tbody>
-      ${rows.map(r => `<tr>
-        ${cols.map(c => `<td>${formatCell(r[c])}</td>`).join('')}
-        <td>
-          <button class="btn btn-ghost" style="padding:4px 10px;font-size:0.8rem;" onclick='openForm("Settings", ${JSON.stringify(cols).replace(/"/g,'&quot;')}, ${JSON.stringify(r).replace(/'/g,"&#39;")})'>編輯</button>
-        </td>
-      </tr>`).join('')}
-      </tbody>
-    </table>
-  </div>`;
+    <div style="color:#666;font-size:0.85rem;margin-bottom:12px;">※ 密碼、LINE token 等建議只「編輯」，不建議新增或刪除。</div>
+    <div class="admin-list">`;
+  rows.forEach(r => {
+    const desc = descriptions[r.key] || '';
+    const isSecret = /password|token/.test(r.key);
+    const displayValue = isSecret && r.value ? '••••••••' : (r.value || '<span style="color:#bbb;">—</span>');
+    html += `<div class="admin-card">
+      <dl class="admin-fields">
+        <div class="field-row">
+          <dt>項目名稱<small style="color:#bbb;">(key)</small></dt>
+          <dd><code style="background:#f0f3f5;padding:2px 6px;border-radius:4px;font-size:0.85rem;">${r.key}</code></dd>
+        </div>
+        <div class="field-row">
+          <dt>目前值</dt>
+          <dd>${displayValue}</dd>
+        </div>
+        ${desc ? `<div class="field-row">
+          <dt>說明</dt>
+          <dd style="color:#666;font-size:0.85rem;font-weight:normal;">${desc}</dd>
+        </div>` : ''}
+      </dl>
+      <div class="admin-card-actions">
+        <button class="btn btn-ghost" onclick='openForm("Settings", ${JSON.stringify(cols).replace(/"/g,'&quot;')}, ${JSON.stringify(r).replace(/'/g,"&#39;")})'>✏️ 編輯</button>
+      </div>
+    </div>`;
+  });
+  html += '</div></div>';
   el.innerHTML = html;
 }
 

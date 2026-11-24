@@ -464,6 +464,110 @@ tr:hover td { background: #FBF7EC; }
   font-size: 1.1rem; font-family: "Noto Serif TC", serif;
 }
 
+/* ---------- 後台卡片式列表 ---------- */
+.admin-list { margin-top: 14px; }
+.admin-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+.admin-card-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+.admin-card-img {
+  width: 72px; height: 72px;
+  object-fit: cover; border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.admin-card-img.placeholder {
+  display: flex; align-items: center; justify-content: center;
+  color: #c9c0b1; font-size: 1.8rem;
+}
+.admin-card-title {
+  font-weight: 700; font-size: 1.1rem;
+  color: var(--title); flex: 1; min-width: 0;
+  word-break: break-word;
+}
+.admin-fields {
+  margin: 0; padding: 0;
+  display: grid;
+  grid-template-columns: minmax(96px, max-content) 1fr;
+  gap: 8px 16px;
+  align-items: start;
+}
+.admin-fields .field-row {
+  display: contents;
+}
+.admin-fields dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding-top: 2px;
+}
+.admin-fields dt small {
+  display: block;
+  font-size: 0.72rem;
+  color: #c9c0b1;
+  margin-top: -1px;
+}
+.admin-fields dd {
+  color: var(--text);
+  font-weight: 600;
+  margin: 0;
+  word-break: break-word;
+  min-width: 0;
+}
+.admin-fields dd img {
+  display: block;
+}
+.admin-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  flex-wrap: wrap;
+}
+.admin-card-actions .btn {
+  padding: 7px 14px;
+  font-size: 0.85rem;
+}
+
+/* 手機：欄位改成上下堆疊 */
+@media (max-width: 560px) {
+  .admin-fields {
+    grid-template-columns: 1fr;
+    gap: 2px 0;
+  }
+  .admin-fields .field-row {
+    display: block;
+    padding: 6px 0;
+    border-bottom: 1px dotted var(--border);
+  }
+  .admin-fields .field-row:last-child { border-bottom: none; }
+  .admin-fields dt {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .admin-fields dd {
+    font-size: 0.95rem;
+  }
+  .admin-card-head { gap: 10px; }
+  .admin-card-img { width: 56px; height: 56px; }
+  .admin-card-title { font-size: 1rem; }
+}
+
 /* ---------- 空狀態 ---------- */
 .empty-state {
   text-align: center; padding: 40px 20px;
