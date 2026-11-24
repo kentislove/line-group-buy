@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>團購下單</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=20261125d">
+</head>
+<body data-page="front">
+<header>
+  <h1 id="siteTitle">團購下單</h1>
+  <div class="sub" id="weekLabel">載入中…</div>
+  <img src="assets/banner-ilan.svg?v=1" class="banner-illustration" alt="" aria-hidden="true">
+</header>
+
+<div class="container" id="main">
+  <div class="card">載入中…</div>
+</div>
+
+<div class="summary" id="summary" style="display:none;">
+  <div>小計 <span class="total-amt" id="totalAmt">0</span></div>
+  <button class="btn" id="checkoutBtn">結帳 / 送單</button>
+</div>
+
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99;align-items:center;justify-content:center;">
+  <div class="card" style="max-width:480px;width:92%;max-height:90vh;overflow:auto;">
+    <h3>確認訂單</h3>
+    <div id="checkoutItems"></div>
+    <label>購買人姓名（必填，可本名/暱稱）</label>
+    <input id="custName" placeholder="例：小美">
+    <label>電話（可不填）</label>
+    <input id="custPhone" placeholder="09xx-xxxxxx">
+    <label>備註</label>
+    <textarea id="custNote" rows="2" placeholder="可留下取貨提醒"></textarea>
+    <div id="turnstileSlot" style="margin:14px 0;display:flex;justify-content:center;"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal()">再修改</button>
+      <button class="btn" id="submitOrderBtn">確認送出</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/saas-config.js?v=20261125b"></script>
+<script src="js/api.js?v=20261125c"></script>
+<script src="js/ux.js?v=20261125c"></script>
+<script src="js/app.js?v=20261125c"></script>
+<script src="js/scroll-top.js?v=20261125b"></script>
+</body>
+</html>

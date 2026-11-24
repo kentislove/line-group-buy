@@ -3,7 +3,14 @@
 // 2026-11-24 重構：商家/攤位改成永久實體 + 每週排班勾選
 // =========================================================
 
-const SS = SpreadsheetApp.getActiveSpreadsheet();
+// MASTER：這支 Apps Script 綁定的試算表（總部，放店家名冊 Shops）
+// SS：這次請求要讀寫的試算表；帶 shop 參數時會換成那家店自己的試算表
+const MASTER = SpreadsheetApp.getActiveSpreadsheet();
+let SS = MASTER;
+let CURRENT_SHOP = '';
+
+// 只能在總部操作、不能帶 shop 參數的動作
+const PLATFORM_ACTIONS = ['createShop', 'listShops', 'setShopStatus', 'resetShopPassword'];
 
 // ---------- 入口 ----------
 function doGet(e) { return handle(e.parameter); }
@@ -15,6 +22,7 @@ function doPost(e) {
 function handle(params) {
   try {
     const action = params.action;
+    routeShop(params);
     let result;
     switch (action) {
       case 'getPublic':         result = getPublic(params); break;
@@ -29,6 +37,10 @@ function handle(params) {
       case 'seedDemoData':      result = seedDemoData(params); break;
       case 'deleteOrder':       result = deleteOrder(params); break;
       case 'applyTemplate':     result = applyTemplate(params); break;
+      case 'createShop':        result = createShop(params); break;
+      case 'listShops':         result = listShops(params); break;
+      case 'setShopStatus':     result = setShopStatus(params); break;
+      case 'resetShopPassword': result = resetShopPassword(params); break;
       default: throw new Error('未知的 action：' + action);
     }
     return json({ ok: true, data: result });
@@ -39,6 +51,154 @@ function handle(params) {
 function json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ---------- 多店路由：依 shop 參數切到那家店的試算表 ----------
+function routeShop(p) {
+  SS = MASTER;
+  CURRENT_SHOP = '';
+  const shop = String(p.shop || '').trim();
+  if (!shop) return;
+  if (PLATFORM_ACTIONS.indexOf(p.action) !== -1) throw new Error('這個動作只能在總部使用');
+  const row = findShop(shop);
+  if (!row) throw new Error('找不到這家店，請確認網址是否完整');
+  if (row.status !== 'active') throw new Error('這家店目前暫停使用，請聯絡開通的人');
+  SS = SpreadsheetApp.openById(row.sheet_id);
+  CURRENT_SHOP = shop;
+}
+function shopsSheet() {
+  let sh = MASTER.getSheetByName('Shops');
+  if (!sh) {
+    sh = MASTER.insertSheet('Shops');
+    sh.getRange(1, 1, 1, 9).setValues([['shop_id', 'name', 'sheet_id', 'owner_name', 'owner_phone', 'status', 'plan', 'created_at', 'note']]);
+  }
+  return sh;
+}
+function readShops() {
+  const rng = shopsSheet().getDataRange().getValues();
+  if (rng.length < 2) return [];
+  const h = rng[0];
+  return rng.slice(1).map(r => {
+    const o = {};
+    h.forEach((k, i) => o[k] = r[i] instanceof Date ? Utilities.formatDate(r[i], 'Asia/Taipei', 'yyyy-MM-dd HH:mm') : r[i]);
+    return o;
+  });
+}
+function findShop(shopId) {
+  return readShops().find(r => String(r.shop_id) === String(shopId)) || null;
+}
+function masterSetting(key) {
+  const sh = MASTER.getSheetByName('Settings');
+  if (!sh) return '';
+  const row = sh.getDataRange().getValues().find(r => r[0] === key);
+  return row ? row[1] : '';
+}
+function setSetting(key, value) {
+  const sh = sheet('Settings');
+  const rng = sh.getDataRange().getValues();
+  for (let i = 1; i < rng.length; i++) {
+    if (rng[i][0] === key) { sh.getRange(i + 1, 2).setValue(value); return; }
+  }
+  sh.appendRow([key, value]);
+}
+
+// ---------- 自動建本期週期 + 代購商家沿用上週勾選 ----------
+// 店家不用每週手動新增週期；攤位不沿用（攤商每週要重新勾）
+function ensureCurrentWeek() {
+  if (String(settings().auto_week).toUpperCase() === 'FALSE') return;
+  const weekId = currentWeekId();
+  if (readAll('Weeks').some(w => w.week_id === weekId)) return;
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    if (readAll('Weeks').some(w => w.week_id === weekId)) return;
+    const y = +weekId.substr(1, 4), m = +weekId.substr(5, 2), d = +weekId.substr(7, 2);
+    const fmt = (dd) => Utilities.formatDate(new Date(Date.UTC(y, m - 1, dd, 4)), 'Asia/Taipei', 'yyyy-MM-dd');
+    sheet('Weeks').appendRow([weekId, fmt(d), fmt(d - 1) + ' 17:00:00', 'open']);
+    const prevId = 'W' + fmt(d - 7).replace(/-/g, '');
+    const wvSheet = sheet('WeekVendors');
+    readAll('WeekVendors').filter(r => r.week_id === prevId).forEach((r, i) => {
+      wvSheet.appendRow(['WV' + new Date().getTime() + i, weekId, r.vendor_id]);
+    });
+  } finally { lock.releaseLock(); }
+}
+
+// ---------- 開通：建一家新店 ----------
+function newShopId() {
+  const exist = new Set(readShops().map(r => String(r.shop_id)));
+  for (let i = 0; i < 20; i++) {
+    const id = 's' + Math.random().toString(36).slice(2, 8);
+    if (id.length === 7 && !exist.has(id)) return id;
+  }
+  throw new Error('產生店家代碼失敗，請再試一次');
+}
+function createShop(p) {
+  requireSuper(p);
+  const name = String(p.shopName || '').trim();
+  const pwd = String(p.adminPassword || '').trim();
+  if (!name) throw new Error('請填店名');
+  if (pwd.length < 6) throw new Error('團購主密碼至少 6 碼');
+  if (p.template && !TEMPLATES[p.template]) throw new Error('沒有這個範本');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const shopId = newShopId();
+    const newSS = SpreadsheetApp.create('團購｜' + name + '｜' + shopId);
+    newSS.setSpreadsheetTimeZone('Asia/Taipei');
+    DriveApp.getFileById(newSS.getId()).moveTo(getOrCreateFolder('LINE團購代購-店家資料'));
+
+    // 切到新店的試算表做初始化
+    SS = newSS; CURRENT_SHOP = shopId;
+    initFreshSchema();
+    newSS.getSheets().forEach(sh => {
+      if (/^(工作表|Sheet)\s?1$/.test(sh.getName()) && newSS.getSheets().length > 1) newSS.deleteSheet(sh);
+    });
+    setSetting('site_title', name);
+    setSetting('admin_password', 'sha256:' + hashPwd(pwd));
+    // 店家層級的超級管理者密碼用亂數、不給任何人；要改設定由總部處理
+    setSetting('super_admin_password', 'sha256:' + hashPwd(Utilities.getUuid()));
+    if (p.template) applyTemplateCore(p.template);
+
+    SS = MASTER; CURRENT_SHOP = '';
+    shopsSheet().appendRow([
+      shopId, name, newSS.getId(), String(p.ownerName || ''), "'" + String(p.ownerPhone || ''),
+      'active', 'free', new Date(), String(p.note || '')
+    ]);
+    return { shopId: shopId, name: name };
+  } finally {
+    SS = MASTER; CURRENT_SHOP = '';
+    lock.releaseLock();
+  }
+}
+function listShops(p) {
+  requireSuper(p);
+  return readShops().map(r => Object.assign({}, r, {
+    sheet_url: 'https://docs.google.com/spreadsheets/d/' + r.sheet_id
+  }));
+}
+function setShopStatus(p) {
+  requireSuper(p);
+  if (['active', 'suspended'].indexOf(p.status) === -1) throw new Error('狀態不正確');
+  const sh = shopsSheet();
+  const rng = sh.getDataRange().getValues();
+  const col = rng[0].indexOf('status') + 1;
+  for (let i = 1; i < rng.length; i++) {
+    if (String(rng[i][0]) === String(p.shopId)) { sh.getRange(i + 1, col).setValue(p.status); return { ok: true }; }
+  }
+  throw new Error('找不到這家店');
+}
+function resetShopPassword(p) {
+  requireSuper(p);
+  const pwd = String(p.adminPassword || '').trim();
+  if (pwd.length < 6) throw new Error('密碼至少 6 碼');
+  const row = findShop(p.shopId);
+  if (!row) throw new Error('找不到這家店');
+  try {
+    SS = SpreadsheetApp.openById(row.sheet_id);
+    setSetting('admin_password', 'sha256:' + hashPwd(pwd));
+  } finally { SS = MASTER; }
+  return { ok: true };
 }
 
 // ---------- 工具 ----------
@@ -101,6 +261,7 @@ function isTrue(v) { return v === true || v === 'TRUE' || v === 'true'; }
 
 // ---------- 前台：取得公開資料 ----------
 function getPublic() {
+  ensureCurrentWeek();
   const weekId = currentWeekId();
   const week = readAll('Weeks').find(r => r.week_id === weekId) || null;
   // 公開的網站設定（不含密碼與 token）
@@ -165,7 +326,8 @@ function submitOrder(p) {
 // ---------- 保密：Turnstile 人機驗證 ----------
 function verifyTurnstile(token) {
   const s = settings();
-  const secret = s.turnstile_secret;
+  // 店家自己沒設就用總部的密鑰（新開通的店不用各自申請 Cloudflare）
+  const secret = s.turnstile_secret || masterSetting('turnstile_secret');
   if (!secret) return; // 未啟用 Turnstile 就跳過
   if (!token) throw new Error('請先完成人機驗證');
   const res = UrlFetchApp.fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -180,7 +342,7 @@ function verifyTurnstile(token) {
 // ---------- 保密：防灌單 ----------
 function antiFlood(customerName) {
   const cache = CacheService.getScriptCache();
-  const key = 'flood_' + customerName.replace(/\s/g, '');
+  const key = 'flood_' + CURRENT_SHOP + '_' + customerName.replace(/\s/g, '');
   if (cache.get(key)) throw new Error('請稍候再試（避免重複送單）');
   cache.put(key, '1', 10); // 10 秒
 }
@@ -216,36 +378,49 @@ function pwdMatch(input, stored) {
   // 否則當作明文（向下相容）
   return String(input) === s;
 }
+// 登入憑證：綁「哪一家店」＋「哪一天」
+// - 綁店：A 店的登入狀態拿去 B 店用不了（就算兩家密碼一樣）
+// - 綁日期：最多兩天就失效，要重新登入
+function credHash(stored) {
+  const s = String(stored || '');
+  return s.indexOf('sha256:') === 0 ? s.substring(7) : hashPwd(s);
+}
+function dayStamp(offsetDays) {
+  const d = new Date(Date.now() - (offsetDays || 0) * 86400000);
+  return Utilities.formatDate(d, 'Asia/Taipei', 'yyyyMMdd');
+}
+function makeToken(prefix, stored, offsetDays) {
+  return prefix + hashPwd(credHash(stored), 'tok|' + (CURRENT_SHOP || 'master') + '|' + dayStamp(offsetDays));
+}
 function adminLogin(p) {
+  // 防猜密碼：同一家店 10 分鐘內錯 8 次就先鎖住
+  const cache = CacheService.getScriptCache();
+  const failKey = 'loginfail_' + (CURRENT_SHOP || 'master');
+  const fails = Number(cache.get(failKey) || 0);
+  if (fails >= 8) throw new Error('密碼錯太多次，請 10 分鐘後再試');
   const s = settings();
   const pwd = String(p.password);
-  if (pwdMatch(pwd, s.super_admin_password)) return { role: 'super', token: 'sa:' + hashPwd(pwd) };
-  if (pwdMatch(pwd, s.admin_password))       return { role: 'admin', token: 'ad:' + hashPwd(pwd) };
+  if (pwdMatch(pwd, s.super_admin_password)) return { role: 'super', token: makeToken('sa:', s.super_admin_password) };
+  if (pwdMatch(pwd, s.admin_password))       return { role: 'admin', token: makeToken('ad:', s.admin_password) };
+  cache.put(failKey, String(fails + 1), 600);
   throw new Error('密碼錯誤');
 }
 function requireAuth(p) {
   const s = settings();
   const t = String(p.token || '');
-  // token 現在是 prefix + hash（sa:xxx 或 ad:xxx）
-  if (t.indexOf('sa:') === 0) {
-    const hash = t.substring(3);
-    const storedHash = String(s.super_admin_password).indexOf('sha256:') === 0
-      ? String(s.super_admin_password).substring(7)
-      : hashPwd(s.super_admin_password);
-    if (hash === storedHash) return 'super';
+  for (let off = 0; off <= 1; off++) { // 今天或昨天發的都算
+    if (s.super_admin_password && t === makeToken('sa:', s.super_admin_password, off)) return 'super';
+    if (s.admin_password && t === makeToken('ad:', s.admin_password, off)) return 'admin';
   }
-  if (t.indexOf('ad:') === 0) {
-    const hash = t.substring(3);
-    const storedHash = String(s.admin_password).indexOf('sha256:') === 0
-      ? String(s.admin_password).substring(7)
-      : hashPwd(s.admin_password);
-    if (hash === storedHash) return 'admin';
-  }
-  // 向下相容：直接比對明文密碼當 token
-  if (t === String(s.super_admin_password)) return 'super';
-  if (t === String(s.admin_password))       return 'admin';
-  throw new Error('請先登入');
+  throw new Error('登入已過期，請重新登入');
 }
+function requireSuper(p) {
+  if (requireAuth(p) !== 'super') throw new Error('權限不足');
+}
+
+// Settings 裡不能外流的項目
+const SECRET_KEYS = ['super_admin_password', 'admin_password', 'line_channel_access_token', 'turnstile_secret'];
+const MASK = '••••••••';
 
 // ---------- 把明文密碼轉成 sha256 格式（跑一次） ----------
 function migratePasswordsToHash() {
@@ -266,9 +441,14 @@ function migratePasswordsToHash() {
 
 // ---------- 後台：取得全部資料 ----------
 function adminGetAll(p) {
-  requireAuth(p);
+  const role = requireAuth(p);
+  ensureCurrentWeek();
+  // 只有超級管理者拿得到 Settings，而且密碼、金鑰一律遮起來
+  const safeSettings = role === 'super'
+    ? readAll('Settings').map(r => SECRET_KEYS.indexOf(r.key) !== -1 && r.value ? { key: r.key, value: MASK } : r)
+    : [];
   return {
-    settings:     readAll('Settings'),
+    settings:     safeSettings,
     weeks:        readAll('Weeks'),
     vendors:      readAll('Vendors'),
     stalls:       readAll('Stalls'),
@@ -280,13 +460,30 @@ function adminGetAll(p) {
 }
 
 // ---------- 後台：新增／更新一筆 ----------
+// 後台可以直接改的分頁（店家名冊 Shops、刪單備份 Orders_Archive 不開放）
+const EDITABLE_SHEETS = ['Weeks', 'Vendors', 'Stalls', 'Items', 'Orders', 'Settings', 'WeekVendors', 'WeekStalls'];
+function checkEditable(p, role) {
+  if (EDITABLE_SHEETS.indexOf(p.sheet) === -1) throw new Error('這個分頁不能從後台修改');
+  if (p.sheet === 'Settings' && role !== 'super') throw new Error('權限不足');
+}
+
 function adminSave(p) {
-  requireAuth(p);
+  const role = requireAuth(p);
+  checkEditable(p, role);
   const sh = sheet(p.sheet);
   const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
   const idKey = headers[0];
   const data = p.row;
   const rng = sh.getDataRange().getValues();
+
+  // Settings：沒改的遮罩值不要寫回去；新密碼自動加密
+  if (p.sheet === 'Settings') {
+    if (data.value === MASK) return { updated: data.key, unchanged: true };
+    if ((data.key === 'super_admin_password' || data.key === 'admin_password') &&
+        data.value && String(data.value).indexOf('sha256:') !== 0) {
+      data.value = 'sha256:' + hashPwd(data.value);
+    }
+  }
 
   for (let i = 1; i < rng.length; i++) {
     if (String(rng[i][0]) === String(data[idKey])) {
@@ -346,20 +543,32 @@ function ensureArchiveSheet(headers) {
 }
 
 // ---------- 自動備份：每週日 23:00 跑一次 ----------
+// 總部試算表 + 名冊裡每一家使用中的店，各自備份、各留最近 8 份
 function weeklyBackup() {
-  const folderName = 'LINE團購代購-備份';
-  let folder;
-  const it = DriveApp.getFoldersByName(folderName);
-  folder = it.hasNext() ? it.next() : DriveApp.createFolder(folderName);
-  const fileName = SS.getName() + ' (' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HHmm') + ')';
-  const copy = DriveApp.getFileById(SS.getId()).makeCopy(fileName, folder);
-  // 保留最近 8 份，太舊的刪掉
+  const root = getOrCreateFolder('LINE團購代購-備份');
+  const log = [backupOne(MASTER.getId(), MASTER.getName(), root)];
+  readShops().filter(r => r.status === 'active').forEach(r => {
+    try {
+      const sub = getOrCreateFolder(r.shop_id + ' ' + r.name, root);
+      log.push(backupOne(r.sheet_id, r.name, sub));
+    } catch (e) { log.push('⚠️ ' + r.shop_id + ' 備份失敗：' + e.message); }
+  });
+  return log.join('\n');
+}
+function getOrCreateFolder(name, parent) {
+  const it = parent ? parent.getFoldersByName(name) : DriveApp.getFoldersByName(name);
+  if (it.hasNext()) return it.next();
+  return parent ? parent.createFolder(name) : DriveApp.createFolder(name);
+}
+function backupOne(sheetId, label, folder) {
+  const stamp = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HHmm');
+  DriveApp.getFileById(sheetId).makeCopy(label + ' (' + stamp + ')', folder);
   const files = folder.getFiles();
   const arr = [];
   while (files.hasNext()) arr.push(files.next());
   arr.sort((a, b) => b.getLastUpdated() - a.getLastUpdated());
   for (let i = 8; i < arr.length; i++) arr[i].setTrashed(true);
-  return copy.getId();
+  return '✅ ' + label;
 }
 // 一鍵安裝每週備份觸發器（只要跑一次）
 function installWeeklyBackupTrigger() {
@@ -374,7 +583,7 @@ function installWeeklyBackupTrigger() {
 
 // ---------- 後台：刪除一筆 ----------
 function adminDelete(p) {
-  requireAuth(p);
+  checkEditable(p, requireAuth(p));
   const sh = sheet(p.sheet);
   const rng = sh.getDataRange().getValues();
   for (let i = 1; i < rng.length; i++) {
@@ -497,7 +706,7 @@ function migrateSchema_v1_2() {
 function uploadImage(p) {
   requireAuth(p);
   if (!p.base64) throw new Error('沒有收到圖片');
-  const folderName = 'LINE團購代購-圖片';
+  const folderName = 'LINE團購代購-圖片' + (CURRENT_SHOP ? '-' + CURRENT_SHOP : '');
   let folder;
   const it = DriveApp.getFoldersByName(folderName);
   if (it.hasNext()) folder = it.next();
@@ -615,17 +824,18 @@ function initFreshSchema() {
     ['share_prefix', '我剛剛下單囉：'],
     ['line_channel_access_token', ''],
     ['line_notify_to', ''],
-    ['turnstile_secret', '']
+    ['turnstile_secret', ''],
+    ['auto_week', 'TRUE']
   ];
   defaults.forEach(([k, v]) => {
     if (!existing.has(k)) { sh.appendRow([k, v]); log.push('✅ Settings：' + k); }
   });
 
-  // 建立本週 + 下週的週期
+  // 只建本期週期；之後每週由 ensureCurrentWeek 自動建，並沿用上週的代購商家勾選
   const d = new Date();
   const dow = d.getDay();
   const daysToNextMon = ((8 - dow) % 7) || 7;
-  for (let n = 0; n < 2; n++) {
+  for (let n = 0; n < 1; n++) {
     const monday = new Date(d);
     monday.setDate(d.getDate() + daysToNextMon + n * 7);
     const weekId = 'W' + Utilities.formatDate(monday, 'Asia/Taipei', 'yyyyMMdd');
@@ -697,8 +907,11 @@ const TEMPLATES = {
 
 function applyTemplate(p) {
   requireAuth(p);
-  const tpl = TEMPLATES[p.template];
-  if (!tpl) throw new Error('沒有這個範本：' + p.template);
+  return applyTemplateCore(p.template);
+}
+function applyTemplateCore(key) {
+  const tpl = TEMPLATES[key];
+  if (!tpl) throw new Error('沒有這個範本：' + key);
   const log = [];
   const vSheet = sheet('Vendors');
   const iSheet = sheet('Items');

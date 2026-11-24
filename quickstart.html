@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261125a">
+<link rel="stylesheet" href="css/style.css?v=20261125d">
 <style>
   html { font-size: 18px; }
   .qs { max-width: 760px; margin: 0 auto; padding: 18px 16px 70px; }
@@ -132,9 +132,13 @@
 <script>
   // 回後台：從哪一頁點進來就回哪一頁
   (function () {
-    const from = new URLSearchParams(location.search).get('from');
-    const ok = ['admin.html', 'dev-admin.html'];
-    document.getElementById('backBtn').href = ok.includes(from) ? from : 'admin.html';
+    const q = new URLSearchParams(location.search);
+    const from = q.get('from');
+    const shop = q.get('shop');
+    const ok = ['admin.html', 'dev-admin.html', 'shop-admin.html'];
+    let back = ok.includes(from) ? from : 'admin.html';
+    if (shop && /^[a-z0-9]{3,20}$/.test(shop)) back += '?shop=' + shop;
+    document.getElementById('backBtn').href = back;
   })();
 </script>
 <script src="js/scroll-top.js?v=20261125a"></script>

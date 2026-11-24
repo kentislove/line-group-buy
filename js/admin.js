@@ -3,8 +3,11 @@
 // 2026-11-24 重構：彈窗表單 + 每週排班勾選 + 商品改掛商家/攤位底下
 // =========================================================
 
-let token = sessionStorage.getItem('adm_token') || '';
-let role = sessionStorage.getItem('adm_role') || '';
+// 每家店的登入狀態分開存（沒帶店家代碼時跟以前一樣）
+const TOKEN_KEY = 'adm_token' + (SHOP_ID ? '_' + SHOP_ID : '');
+const ROLE_KEY = 'adm_role' + (SHOP_ID ? '_' + SHOP_ID : '');
+let token = sessionStorage.getItem(TOKEN_KEY) || '';
+let role = sessionStorage.getItem(ROLE_KEY) || '';
 let cache = {};
 let currentTab = 'weeks';
 // 功能開關：只有 dev-config.js 會打開，正式版 config.js 沒寫就全部關閉
@@ -105,8 +108,8 @@ function showLoading(msg) {
 }
 function hideLoading() { document.getElementById('loading').classList.remove('show'); }
 function logout() {
-  sessionStorage.removeItem('adm_token');
-  sessionStorage.removeItem('adm_role');
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(ROLE_KEY);
   window.location.reload();
 }
 window.logout = logout;
@@ -114,7 +117,8 @@ window.logout = logout;
 // ---------- 登入 ----------
 document.getElementById('loginBtn').onclick = login;
 document.getElementById('pwd').onkeydown = e => { if (e.key === 'Enter') login(); };
-if (token) { showAdmin(); }
+// 登入過期（或密碼被改）就退回登入畫面，不要卡在載入中
+if (token) { showAdmin().catch(e => { alert(e.message); logout(); }); }
 
 async function login() {
   const pwd = document.getElementById('pwd').value.trim();
@@ -123,8 +127,8 @@ async function login() {
   try {
     const res = await API.call('adminLogin', { password: pwd });
     token = res.token; role = res.role;
-    sessionStorage.setItem('adm_token', token);
-    sessionStorage.setItem('adm_role', role);
+    sessionStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.setItem(ROLE_KEY, role);
     showAdmin();
   } catch (e) { alert(e.message); }
   finally { hideLoading(); }

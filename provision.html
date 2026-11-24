@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>開通店家｜團購系統總部</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=20261125d">
+<style>
+  .pv { max-width: 860px; margin: 0 auto; padding: 18px 16px 60px; }
+  .pv h2 { font-family: "Noto Serif TC", serif; margin: 0 0 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+  .pw-row { display: flex; gap: 8px; }
+  .pw-row input { font-family: Consolas, monospace; font-size: 1.15rem; letter-spacing: 2px; }
+  .result { background: var(--primary-light); border: 1px solid #C8D9C3; border-radius: var(--radius); padding: 18px; margin-top: 16px; }
+  .result h3 { margin: 0 0 10px; }
+  .kv { display: grid; grid-template-columns: 110px 1fr auto; gap: 8px 10px; align-items: center; margin: 6px 0; }
+  .kv .k { color: var(--muted); font-size: 0.9rem; }
+  .kv .v { font-family: Consolas, monospace; font-size: 0.85rem; word-break: break-all; }
+  .kv .v.big { font-size: 1.3rem; letter-spacing: 3px; color: var(--title); }
+  @media (max-width: 560px) { .kv { grid-template-columns: 1fr auto; } .kv .k { grid-column: 1 / -1; } }
+  .mini { padding: 6px 12px !important; font-size: 0.82rem !important; min-height: 0 !important; }
+  .msg-box { width: 100%; min-height: 190px; font-size: 0.92rem; line-height: 1.7; margin-top: 8px; }
+  .shop-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; }
+  .shop-card.off { opacity: 0.6; }
+  .shop-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+  .shop-head b { font-size: 1.05rem; }
+  .shop-meta { color: var(--muted); font-size: 0.85rem; margin: 4px 0 8px; }
+  .shop-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { font-size: 0.75rem; padding: 2px 10px; border-radius: 999px; background: var(--primary-light); color: var(--primary-dark); }
+  .badge.off { background: #f3e0dc; color: var(--danger); }
+  .note-warn { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; line-height: 1.7; margin-top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>開通店家</h1>
+  <div class="sub">團購系統總部｜只有您會用到這一頁</div>
+</header>
+
+<div id="loading"><div class="spinner"></div><div id="loadingText">處理中…</div></div>
+
+<div class="pv">
+
+  <div class="card" id="loginBox">
+    <h2>總部登入</h2>
+    <label>總部超級管理者密碼</label>
+    <input type="password" id="pwd" placeholder="開發版試算表 Settings 裡的超級管理者密碼">
+    <div style="margin-top:12px;"><button class="btn" id="loginBtn">登入</button></div>
+  </div>
+
+  <div id="area" style="display:none;">
+
+    <div class="card">
+      <h2>➕ 開通一家新店</h2>
+      <div class="grid2">
+        <div><label>店名（客人會看到）*</label><input id="fName" placeholder="例：阿美水果行"></div>
+        <div><label>從範本開始</label>
+          <select id="fTpl">
+            <option value="">不用範本（空白開始）</option>
+            <option value="breakfast">🍞 早餐店</option>
+            <option value="fruit">🍎 水果箱</option>
+            <option value="bakery">🥖 烘焙坊（代購費 10%）</option>
+          </select>
+        </div>
+        <div><label>團購主稱呼</label><input id="fOwner" placeholder="例：阿美姐"></div>
+        <div><label>團購主電話</label><input id="fPhone" inputmode="tel" placeholder="09xx-xxxxxx"></div>
+      </div>
+      <label>團購主後台密碼（自動產生，可自己改，至少 6 碼）</label>
+      <div class="pw-row">
+        <input id="fPwd" autocomplete="off">
+        <button class="btn btn-ghost mini" type="button" onclick="newPwd()">換一組</button>
+      </div>
+      <label>備註（只有您看得到）</label>
+      <input id="fNote" placeholder="例：台北果菜市場 第二批發 A12">
+      <div style="margin-top:14px;"><button class="btn" id="createBtn">✅ 開通</button></div>
+
+      <div id="result"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <h2 style="margin:0;">📋 已開通的店家 <small id="shopCount" style="color:var(--muted);font-weight:400;"></small></h2>
+        <button class="btn btn-ghost mini" onclick="loadShops()">重新整理</button>
+      </div>
+      <div id="shopList" style="margin-top:12px;"></div>
+    </div>
+
+    <div style="text-align:center;margin-top:10px;"><button class="logout-btn" style="background:var(--primary);" onclick="logoutPv()">登出總部</button></div>
+  </div>
+</div>
+
+<script src="js/saas-config.js?v=20261125b"></script>
+<script>window.APP_CONFIG.REQUIRE_SHOP = false;</script>
+<script src="js/api.js?v=20261125c"></script>
+<script>
+const KEY = 'prov_token';
+let pvToken = sessionStorage.getItem(KEY) || '';
+const $ = id => document.getElementById(id);
+const loading = (on, t) => { $('loadingText').textContent = t || '處理中…'; $('loading').classList.toggle('show', on); };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pageUrl = (page, shopId) => new URL(page + '?shop=' + encodeURIComponent(shopId), location.href).href;
+
+function genPwd() {
+  const a = new Uint32Array(1); crypto.getRandomValues(a);
+  return String(a[0] % 900000 + 100000); // 6 位數，不會 0 開頭
+}
+function newPwd() { $('fPwd').value = genPwd(); }
+
+async function copy(text, btn) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  if (btn) { const o = btn.textContent; btn.textContent = '已複製'; setTimeout(() => btn.textContent = o, 1500); }
+}
+
+async function login() {
+  const pwd = $('pwd').value.trim();
+  if (!pwd) return;
+  loading(true, '驗證中…');
+  try {
+    const r = await API.call('adminLogin', { password: pwd });
+    if (r.role !== 'super') throw new Error('這組密碼不是總部超級管理者');
+    pvToken = r.token; sessionStorage.setItem(KEY, pvToken);
+    await enter();
+  } catch (e) { alert(e.message); }
+  finally { loading(false); }
+}
+function logoutPv() { sessionStorage.removeItem(KEY); location.reload(); }
+
+async function enter() {
+  $('loginBox').style.display = 'none';
+  $('area').style.display = 'block';
+  newPwd();
+  await loadShops();
+}
+
+function onboardMsg(name, shopId) {
+  return `【團購系統開通通知】
+店名：${name}
+
+📱 客人下單網址（請貼到您的 LINE 團購群組）：
+${pageUrl('shop.html', shopId)}
+
+🛠 您的後台網址（自己用就好，請不要轉給別人）：
+${pageUrl('shop-admin.html', shopId)}
+
+🔑 後台密碼會另外告訴您。
+
+第一次登入後台會跳出 3 步驟導引，照著按就能開團。
+圖文說明：${new URL('quickstart.html?from=shop-admin.html&shop=' + shopId, location.href).href}`;
+}
+
+function showResult(shopId, name, pwd) {
+  const front = pageUrl('shop.html', shopId);
+  const admin = pageUrl('shop-admin.html', shopId);
+  const msg = onboardMsg(name, shopId);
+  $('result').innerHTML = `
+    <div class="result">
+      <h3>🎉 「${esc(name)}」開通好了</h3>
+      <div class="kv"><span class="k">店家代碼</span><span class="v">${esc(shopId)}</span><span></span></div>
+      <div class="kv"><span class="k">客人下單網址</span><a class="v" href="${esc(front)}" target="_blank">${esc(front)}</a><button class="btn btn-ghost mini" data-copy="${esc(front)}">複製</button></div>
+      <div class="kv"><span class="k">團購主後台</span><a class="v" href="${esc(admin)}" target="_blank">${esc(admin)}</a><button class="btn btn-ghost mini" data-copy="${esc(admin)}">複製</button></div>
+      <div class="kv"><span class="k">後台密碼</span><span class="v big">${esc(pwd)}</span><button class="btn btn-ghost mini" data-copy="${esc(pwd)}">複製</button></div>
+      <div class="note-warn">密碼系統只存加密後的版本，<b>離開這頁就看不到了</b>。請現在記下來，用電話或另一則訊息告訴團購主，不要跟網址放在同一則。忘記了可以在下面名冊按「重設密碼」。</div>
+      <label style="margin-top:14px;">給團購主的開通訊息（不含密碼，可直接貼到 LINE）</label>
+      <textarea class="msg-box" readonly>${esc(msg)}</textarea>
+      <button class="btn" style="margin-top:8px;" data-copy-msg="1">📋 複製開通訊息</button>
+    </div>`;
+  $('result').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy, b));
+  $('result').querySelector('[data-copy-msg]').onclick = (e) => copy(msg, e.target);
+  $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function createShop() {
+  const name = $('fName').value.trim();
+  const pwd = $('fPwd').value.trim();
+  if (!name) return alert('請填店名');
+  if (pwd.length < 6) return alert('密碼至少 6 碼');
+  if (!confirm(`確定開通「${name}」？`)) return;
+  loading(true, '開通中…建立店家試算表約需 10～20 秒');
+  try {
+    const r = await API.call('createShop', {
+      token: pvToken, shopName: name, adminPassword: pwd,
+      ownerName: $('fOwner').value.trim(), ownerPhone: $('fPhone').value.trim(),
+      note: $('fNote').value.trim(), template: $('fTpl').value
+    });
+    showResult(r.shopId, r.name, pwd);
+    ['fName', 'fOwner', 'fPhone', 'fNote'].forEach(id => $(id).value = '');
+    $('fTpl').value = '';
+    newPwd();
+    loadShops();
+  } catch (e) { alert('開通失敗：' + e.message); }
+  finally { loading(false); }
+}
+
+async function loadShops() {
+  try {
+    const list = await API.call('listShops', { token: pvToken });
+    $('shopCount').textContent = '（' + list.length + ' 家）';
+    if (!list.length) { $('shopList').innerHTML = '<div class="empty-state">還沒有開通任何店家</div>'; return; }
+    $('shopList').innerHTML = list.slice().reverse().map(s => {
+      const on = s.status === 'active';
+      return `<div class="shop-card ${on ? '' : 'off'}">
+        <div class="shop-head"><b>${esc(s.name)}</b><span class="badge ${on ? '' : 'off'}">${on ? '使用中' : '已停用'}</span></div>
+        <div class="shop-meta">代碼 ${esc(s.shop_id)}　${esc(s.owner_name)} ${esc(s.owner_phone)}　開通 ${esc(s.created_at)}${s.note ? '　｜' + esc(s.note) : ''}</div>
+        <div class="shop-actions">
+          <a class="btn btn-ghost mini" href="${esc(pageUrl('shop.html', s.shop_id))}" target="_blank">下單頁</a>
+          <a class="btn btn-ghost mini" href="${esc(pageUrl('shop-admin.html', s.shop_id))}" target="_blank">後台</a>
+          <a class="btn btn-ghost mini" href="${esc(s.sheet_url)}" target="_blank">試算表</a>
+          <button class="btn btn-ghost mini" data-act="msg" data-id="${esc(s.shop_id)}" data-name="${esc(s.name)}">複製開通訊息</button>
+          <button class="btn btn-ghost mini" data-act="pwd" data-id="${esc(s.shop_id)}" data-name="${esc(s.name)}">重設密碼</button>
+          <button class="btn ${on ? 'btn-danger' : ''} mini" data-act="${on ? 'off' : 'on'}" data-id="${esc(s.shop_id)}" data-name="${esc(s.name)}">${on ? '停用' : '恢復使用'}</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    if (/登入|權限/.test(e.message)) { alert(e.message); logoutPv(); }
+    else $('shopList').innerHTML = '<div class="card" style="color:var(--danger)">讀取失敗：' + esc(e.message) + '</div>';
+  }
+}
+
+$('shopList').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const { act, id, name } = b.dataset;
+  if (act === 'msg') return copy(onboardMsg(name, id), b);
+  if (act === 'pwd') {
+    const pwd = genPwd();
+    if (!confirm(`把「${name}」的後台密碼重設成 ${pwd}？\n舊密碼會立刻失效，團購主要用新密碼重新登入。`)) return;
+    loading(true, '重設中…');
+    try {
+      await API.call('resetShopPassword', { token: pvToken, shopId: id, adminPassword: pwd });
+      loading(false);
+      prompt('已重設。新密碼（請記下來告訴團購主）：', pwd);
+    } catch (err) { alert(err.message); } finally { loading(false); }
+    return;
+  }
+  const status = act === 'off' ? 'suspended' : 'active';
+  if (status === 'suspended' && !confirm(`停用「${name}」？\n停用後客人打不開下單頁、團購主也進不了後台，資料會保留，可以再恢復。`)) return;
+  loading(true, '更新中…');
+  try { await API.call('setShopStatus', { token: pvToken, shopId: id, status }); await loadShops(); }
+  catch (err) { alert(err.message); } finally { loading(false); }
+});
+
+$('loginBtn').onclick = login;
+$('pwd').onkeydown = e => { if (e.key === 'Enter') login(); };
+$('createBtn').onclick = createShop;
+if (pvToken) enter().catch(e => { alert(e.message); logoutPv(); });
+</script>
+</body>
+</html>

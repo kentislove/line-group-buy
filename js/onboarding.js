@@ -11,8 +11,17 @@
 
   // 後台頁 → 對應的下單頁
   function frontUrl() {
-    const page = /dev-admin\.html$/.test(location.pathname) ? 'dev.html' : 'index.html';
-    return new URL(page, location.href).href;
+    const path = location.pathname;
+    const page = /shop-admin\.html$/.test(path) ? 'shop.html'
+               : /dev-admin\.html$/.test(path) ? 'dev.html' : 'index.html';
+    const u = new URL(page, location.href);
+    if (typeof SHOP_ID !== 'undefined' && SHOP_ID) u.searchParams.set('shop', SHOP_ID);
+    return u.href;
+  }
+  function quickstartUrl() {
+    const q = new URLSearchParams({ from: location.pathname.split('/').pop() || 'admin.html' });
+    if (typeof SHOP_ID !== 'undefined' && SHOP_ID) q.set('shop', SHOP_ID);
+    return 'quickstart.html?' + q.toString();
   }
 
   async function copyText(text) {
@@ -85,7 +94,7 @@
           '按下去會複製網址，到 LINE 群組貼上送出就好。',
           '🔗 複製下單網址', 'copy')}
         <div class="ob-foot">
-          <a href="quickstart.html?from=${location.pathname.split('/').pop()}" target="_blank">📄 看圖文版／印出來</a>
+          <a href="${quickstartUrl()}" target="_blank">📄 看圖文版／印出來</a>
           <div class="ob-foot-btns">
             <button class="btn btn-ghost" data-act="later">下次再說</button>
             <button class="btn btn-ghost" data-act="never">我會了，不用再跳</button>
