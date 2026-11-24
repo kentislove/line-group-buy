@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>農安市集112宜蘭美食市集｜線上團購系統</title>
+<meta name="description" content="手機下單、分享到 LINE、後台一鍵管理 — 專為宜蘭小農市集設計">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Noto Sans TC", -apple-system, sans-serif;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(122,155,118,0.18), transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(224,122,95,0.12), transparent 50%),
+      #1a1d1c;
+    color: #f0e9d9;
+    min-height: 100vh;
+    overflow-x: hidden;
+    letter-spacing: 0.5px;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 30px 20px 60px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    align-items: center;
+  }
+  @media (min-width: 900px) {
+    .wrap { grid-template-columns: 1fr 380px; padding: 40px 32px; gap: 40px; }
+  }
+
+  .brand {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .brand .tag {
+    display: inline-block;
+    background: rgba(122,155,118,0.2);
+    color: #a8c4a3;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+  }
+  .brand h1 {
+    font-family: "Noto Serif TC", serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    margin-top: 10px;
+    color: #FBF5EC;
+  }
+  .brand .sub {
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #a09888;
+    line-height: 1.7;
+  }
+
+  /* 文字區 */
+  .narration {
+    order: 2;
+  }
+  @media (min-width: 900px) {
+    .narration { order: 0; }
+  }
+  .caption-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 24px 22px;
+    min-height: 220px;
+    display: flex; flex-direction: column; justify-content: center;
+    backdrop-filter: blur(10px);
+  }
+  .caption-no {
+    color: #7A9B76;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .caption-title {
+    font-family: "Noto Serif TC", serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #FBF5EC;
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  .caption-desc {
+    color: #d6cfbe;
+    font-size: 0.95rem;
+    line-height: 1.8;
+  }
+
+  /* 手機外框 */
+  .phone-wrap {
+    display: flex; justify-content: center;
+    order: 1;
+  }
+  .phone {
+    width: 320px;
+    height: 650px;
+    background: #111;
+    border-radius: 42px;
+    padding: 12px 10px;
+    box-shadow:
+      0 0 0 2px #333,
+      0 30px 60px rgba(0,0,0,0.5),
+      0 0 0 1px rgba(255,255,255,0.05) inset;
+    position: relative;
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 20px; left: 50%;
+    transform: translateX(-50%);
+    width: 110px; height: 20px;
+    background: #000;
+    border-radius: 12px;
+    z-index: 3;
+  }
+  .screen {
+    width: 100%; height: 100%;
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
+    background: #FBF5EC;
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  .slide.active { opacity: 1; }
+  .slide img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+  }
+
+  /* 控制 */
+  .controls {
+    grid-column: 1 / -1;
+    display: flex; gap: 10px; align-items: center; justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .ctrl-btn {
+    background: rgba(255,255,255,0.08);
+    color: #FBF5EC;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 10px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { background: rgba(255,255,255,0.15); }
+  .ctrl-btn.primary {
+    background: #7A9B76;
+    border-color: #7A9B76;
+  }
+  .ctrl-btn.primary:hover { background: #8FAA8A; }
+  .page-info {
+    color: #a09888;
+    font-size: 0.85rem;
+    min-width: 50px; text-align: center;
+  }
+
+  /* 進度條 */
+  .progress {
+    grid-column: 1 / -1;
+    height: 3px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #7A9B76, #8FAA8A);
+    width: 0;
+    transition: width 0.1s linear;
+  }
+
+  /* CTA footer */
+  .footer {
+    grid-column: 1 / -1;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    text-align: center;
+  }
+  .footer h3 {
+    font-family: "Noto Serif TC", serif;
+    font-size: 1.3rem;
+    margin-bottom: 14px;
+    color: #FBF5EC;
+  }
+  .footer .cta-grid {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .cta {
+    display: inline-block;
+    padding: 12px 28px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.15s;
+  }
+  .cta.primary {
+    background: #06C755;
+    color: #fff;
+  }
+  .cta.primary:hover { background: #04a847; }
+  .cta.ghost {
+    background: transparent;
+    color: #a8c4a3;
+    border: 1.5px solid #7A9B76;
+  }
+  .cta.ghost:hover { background: rgba(122,155,118,0.15); }
+  .credit {
+    color: #666;
+    font-size: 0.75rem;
+    margin-top: 20px;
+    letter-spacing: 1px;
+  }
+  .credit a { color: #888; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="brand" style="grid-column: 1 / -1;">
+    <span class="tag">宜蘭小農市集 ・ 線上團購</span>
+    <h1>農安市集112宜蘭美食市集</h1>
+    <div class="sub">
+      客人滑一滑手機就下單　團購主手機就能管好一週生意<br>
+      週一取貨、週日截止　代購費自動算、分享到 LINE 一鍵完成
+    </div>
+  </div>
+
+  <div class="narration">
+    <div class="caption-box">
+      <div class="caption-no" id="capNo">01 / 10</div>
+      <div class="caption-title" id="capTitle">載入中…</div>
+      <div class="caption-desc" id="capDesc"></div>
+    </div>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen" id="screen"></div>
+    </div>
+  </div>
+
+  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="prevBtn">← 上一張</button>
+    <button class="ctrl-btn primary" id="playBtn">⏸ 暫停</button>
+    <button class="ctrl-btn" id="nextBtn">下一張 →</button>
+    <span class="page-info" id="pageInfo">1 / 10</span>
+  </div>
+
+  <div class="footer">
+    <h3>想看完整的試用？</h3>
+    <div class="cta-grid">
+      <a href="/" class="cta primary">👉 去前台下單</a>
+      <a href="admin.html" class="cta ghost">🛠 進後台試試</a>
+    </div>
+    <div class="credit">© 農安市集112宜蘭美食市集 ｜ <a href="manual.html">操作手冊</a></div>
+  </div>
+
+</div>
+
+<script>
+const slides = [
+  { img: 'demo-shots/01-home.jpg', title: '一打開就看到本週團購',
+    desc: '手機點 LINE 群組的連結直接進來。頂上是下單截止時間，中間是蘭陽山景＋小農市集插畫。' },
+  { img: 'demo-shots/02-add-item.jpg', title: '點 ＋ 就能加進購物車',
+    desc: '阿賢的鮮肉餅加 2 包，底部馬上算出小計 $60。免代購費的店家就直接是商品總價。' },
+  { img: 'demo-shots/03-yishun.jpg', title: '滑到下一家｜亦順軒',
+    desc: '另一家代購商家：亦順軒。右上角標著「代購費 10%」，等結帳時自動依小計加計。' },
+  { img: 'demo-shots/04-add-yishun.jpg', title: '跨家下單｜10% 自動算',
+    desc: '再加 1 條紅酒莓果 $60。底下小計跳成 $126（60+60+亦順軒 10% 代購費）。' },
+  { img: 'demo-shots/05-checkout.jpg', title: '結帳｜明細一目了然',
+    desc: '彈出確認視窗，每一項、代購費、總計都列清楚。填暱稱和電話就能送單，電話可填可不填。' },
+  { img: 'demo-shots/06-success.jpg', title: '送單完成｜一鍵分享 LINE',
+    desc: '下單後跳出訂單摘要，按「分享到 LINE」直接開聊天室挑收件人；或複製訂單貼給團購主。' },
+  { img: 'demo-shots/07-admin-orders.jpg', title: '後台｜即時看到所有訂單',
+    desc: '客人訂單依時間排列，電話、商家、品項、金額清楚。按「整筆刪除」一鍵清掉錯單。' },
+  { img: 'demo-shots/08-admin-report.jpg', title: '本週報表｜列印／匯出 Excel',
+    desc: '依客人分組，看得到每個人買了什麼、各自總計。可以列印給攤商、或匯出 Excel 給會計。' },
+  { img: 'demo-shots/09-schedule.jpg', title: '每週勾一勾就排班完成',
+    desc: '週期分頁點「設定排班」→ 勾選這週出現的商家、攤位。前台只會顯示勾起來的。' },
+  { img: 'demo-shots/10-quick-add.jpg', title: '新增商家｜5 格搞定',
+    desc: '快速新增商家只問 5 樣：名稱、收不收代購費、金額、模式、照片。其他自動帶預設值。' }
+];
+
+const screen = document.getElementById('screen');
+const bar = document.getElementById('progressBar');
+const capNo = document.getElementById('capNo');
+const capTitle = document.getElementById('capTitle');
+const capDesc = document.getElementById('capDesc');
+const pageInfo = document.getElementById('pageInfo');
+
+// 先建所有 slide 元素 + preload
+slides.forEach((s, i) => {
+  const div = document.createElement('div');
+  div.className = 'slide';
+  div.innerHTML = `<img src="${s.img}" alt="${s.title}" loading="eager">`;
+  screen.appendChild(div);
+});
+
+let current = 0;
+let playing = true;
+const DURATION = 4500; // 每張 4.5 秒
+let startTime = Date.now();
+
+function show(i) {
+  const n = slides.length;
+  current = ((i % n) + n) % n;
+  document.querySelectorAll('.slide').forEach((el, idx) => {
+    el.classList.toggle('active', idx === current);
+  });
+  const s = slides[current];
+  capNo.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(n).padStart(2, '0');
+  capTitle.textContent = s.title;
+  capDesc.textContent = s.desc;
+  pageInfo.textContent = (current + 1) + ' / ' + n;
+  startTime = Date.now();
+}
+
+function tick() {
+  if (playing) {
+    const elapsed = Date.now() - startTime;
+    const pct = Math.min(100, (elapsed / DURATION) * 100);
+    bar.style.width = pct + '%';
+    if (elapsed >= DURATION) show(current + 1);
+  }
+  requestAnimationFrame(tick);
+}
+
+document.getElementById('prevBtn').onclick = () => show(current - 1);
+document.getElementById('nextBtn').onclick = () => show(current + 1);
+document.getElementById('playBtn').onclick = (e) => {
+  playing = !playing;
+  e.target.textContent = playing ? '⏸ 暫停' : '▶ 播放';
+  if (playing) startTime = Date.now() - (parseFloat(bar.style.width) / 100 * DURATION);
+};
+
+// 鍵盤
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') show(current - 1);
+  else if (e.key === 'ArrowRight') show(current + 1);
+  else if (e.key === ' ') { e.preventDefault(); document.getElementById('playBtn').click(); }
+});
+
+show(0);
+tick();
+</script>
+</body>
+</html>
