@@ -266,6 +266,7 @@ function renderParents(el, type) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick='openQuickForm("${sheet}")'>⚡ 快速新增${isVendor?'商家':'攤位'}</button>
       <button class="btn btn-ghost" onclick='openForm("${sheet}", ${JSON.stringify(cols).replace(/"/g,'&quot;')})'>➕ 完整新增（進階）</button>
+      ${isVendor ? `<button class="btn btn-ghost" onclick='openTemplatePicker()' style="background:#FFF8E1;color:#8B6914;border-color:#F4D37A;">📋 用範本一鍵建</button>` : ''}
     </div>
     <div class="admin-list">`;
 
@@ -385,6 +386,48 @@ window.openQuickForm = function(sheet) {
   const cols = QUICK_FIELDS[sheet] || Object.keys(FIELD_META[sheet]);
   const defaults = QUICK_DEFAULTS[sheet] || {};
   openForm(sheet, cols, defaults, { quick: true });
+};
+
+// 📋 範本選單
+window.openTemplatePicker = function() {
+  const html = `
+    <div id="tplOverlay" class="modal show" style="z-index:200;">
+      <div class="modal-content" style="max-width:480px;">
+        <h3>📋 從範本一鍵建立</h3>
+        <div style="color:#666;font-size:0.9rem;margin-bottom:14px;">選一個最接近您店家類型的範本，系統會自動建好商家＋商品，再進去改名字價格就好。</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn" style="padding:16px;font-size:1rem;text-align:left;" onclick="applyTpl('breakfast')">
+            🍞 早餐店範本<br>
+            <small style="font-weight:400;opacity:0.9;">三明治、蛋餅、蘿蔔糕、豆漿 等 7 樣</small>
+          </button>
+          <button class="btn" style="padding:16px;font-size:1rem;text-align:left;background:#D4A574;" onclick="applyTpl('fruit')">
+            🍎 水果箱範本<br>
+            <small style="font-weight:400;opacity:0.9;">綜合箱、蘋果、芒果、葡萄、香蕉 等 7 樣</small>
+          </button>
+          <button class="btn" style="padding:16px;font-size:1rem;text-align:left;background:#E07A5F;" onclick="applyTpl('bakery')">
+            🥖 烘焙坊範本（代購費 10%）<br>
+            <small style="font-weight:400;opacity:0.9;">歐包、吐司、可頌、乳酪蛋糕 等 7 樣</small>
+          </button>
+        </div>
+        <div style="margin-top:16px;text-align:right;">
+          <button class="btn btn-ghost" onclick="document.getElementById('tplOverlay').remove()">取消</button>
+        </div>
+      </div>
+    </div>`;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  document.body.appendChild(wrap.firstElementChild);
+};
+window.applyTpl = async function(key) {
+  document.getElementById('tplOverlay')?.remove();
+  showLoading('套用範本中…');
+  try {
+    const res = await API.call('applyTemplate', { token, template: key });
+    alert(res);
+    await loadAll();
+    renderTab();
+  } catch (e) { alert(e.message); }
+  finally { hideLoading(); }
 };
 
 // 🆕 快速新增商品（parent_type/id 自動帶）

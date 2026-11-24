@@ -28,6 +28,7 @@ function handle(params) {
       case 'uploadImage':       result = uploadImage(params); break;
       case 'seedDemoData':      result = seedDemoData(params); break;
       case 'deleteOrder':       result = deleteOrder(params); break;
+      case 'applyTemplate':     result = applyTemplate(params); break;
       default: throw new Error('未知的 action：' + action);
     }
     return json({ ok: true, data: result });
@@ -452,6 +453,99 @@ function migrateSchema_v1_4() {
     log.push('✓ Vendors 已有 fee_type 欄');
   }
   return '🎉 v1.4 遷移完成！\n\n' + log.join('\n');
+}
+
+// ---------- 一鍵套用範本：早餐/水果/烘焙 ----------
+const TEMPLATES = {
+  breakfast: {
+    name: '早餐店範本',
+    vendor: { id: 'V_tpl_bf', name: '早安早餐店', has_fee: 'FALSE', fee_amount: 0, fee_type: 'flat' },
+    items: [
+      ['I_bf01', '鮪魚三明治', 35, '份'],
+      ['I_bf02', '火腿蛋三明治', 45, '份'],
+      ['I_bf03', '培根蛋吐司', 40, '份'],
+      ['I_bf04', '原味蛋餅', 35, '份'],
+      ['I_bf05', '蘿蔔糕', 30, '份'],
+      ['I_bf06', '冰奶茶', 30, '杯'],
+      ['I_bf07', '熱豆漿', 25, '杯']
+    ]
+  },
+  fruit: {
+    name: '水果箱範本',
+    vendor: { id: 'V_tpl_fr', name: '四季水果箱', has_fee: 'FALSE', fee_amount: 0, fee_type: 'flat' },
+    items: [
+      ['I_fr01', '綜合水果小箱', 350, '箱'],
+      ['I_fr02', '富士蘋果（5 顆）', 200, '袋'],
+      ['I_fr03', '愛文芒果（3 顆）', 180, '袋'],
+      ['I_fr04', '巨峰葡萄', 220, '盒'],
+      ['I_fr05', '香蕉', 60, '把'],
+      ['I_fr06', '奇異果（6 顆）', 150, '袋'],
+      ['I_fr07', '進口橘子（10 顆）', 180, '袋']
+    ]
+  },
+  bakery: {
+    name: '烘焙坊範本',
+    vendor: { id: 'V_tpl_bk', name: '手作烘焙坊', has_fee: 'TRUE', fee_amount: 10, fee_type: 'percent' },
+    items: [
+      ['I_bk01', '歐式鄉村麵包', 85, '條'],
+      ['I_bk02', '鮮奶吐司', 120, '條'],
+      ['I_bk03', '可頌', 45, '個'],
+      ['I_bk04', '肉鬆麵包', 35, '個'],
+      ['I_bk05', '蔥花麵包', 35, '個'],
+      ['I_bk06', '乳酪蛋糕', 380, '盒'],
+      ['I_bk07', '檸檬磅蛋糕', 220, '條']
+    ]
+  }
+};
+
+function applyTemplate(p) {
+  requireAuth(p);
+  const tpl = TEMPLATES[p.template];
+  if (!tpl) throw new Error('沒有這個範本：' + p.template);
+  const log = [];
+  const vSheet = sheet('Vendors');
+  const iSheet = sheet('Items');
+  const vHeaders = vSheet.getRange(1, 1, 1, vSheet.getLastColumn()).getValues()[0];
+  const iHeaders = iSheet.getRange(1, 1, 1, iSheet.getLastColumn()).getValues()[0];
+
+  // 建商家
+  const existingV = readAll('Vendors').find(v => v.vendor_id === tpl.vendor.id);
+  if (!existingV) {
+    const row = {
+      vendor_id: tpl.vendor.id, name: tpl.vendor.name,
+      has_fee: tpl.vendor.has_fee, fee_amount: tpl.vendor.fee_amount,
+      fee_type: tpl.vendor.fee_type, active: 'TRUE', image_url: ''
+    };
+    vSheet.appendRow(vHeaders.map(h => row[h] !== undefined ? row[h] : ''));
+    log.push('✅ 商家：' + tpl.vendor.name);
+  } else {
+    log.push('✓ 商家 ' + tpl.vendor.name + ' 已存在，略過');
+  }
+
+  // 建商品
+  const existingI = new Set(readAll('Items').map(x => x.item_id));
+  tpl.items.forEach(([iid, name, price, unit]) => {
+    if (existingI.has(iid)) { log.push('✓ ' + iid + ' 已存在，略過'); return; }
+    const row = {
+      item_id: iid, parent_type: 'vendor', parent_id: tpl.vendor.id,
+      name: name, price: price, unit: unit, active: 'TRUE', image_url: ''
+    };
+    iSheet.appendRow(iHeaders.map(h => row[h] !== undefined ? row[h] : ''));
+    log.push('✅ 商品：' + name);
+  });
+
+  // 自動勾選到目前的週期
+  const weekId = currentWeekId();
+  const weekExists = readAll('Weeks').some(w => w.week_id === weekId);
+  if (weekExists) {
+    const wv = readAll('WeekVendors').some(r => r.week_id === weekId && r.vendor_id === tpl.vendor.id);
+    if (!wv) {
+      sheet('WeekVendors').appendRow(['WV' + new Date().getTime(), weekId, tpl.vendor.id]);
+      log.push('✅ 已勾選到本週排班（' + weekId + '）');
+    }
+  }
+
+  return '🎉 範本套用完成\n\n' + log.join('\n');
 }
 
 // ---------- 一鍵填入 Demo 資料（阿賢+亦順軒 2 家 17 商品） ----------
