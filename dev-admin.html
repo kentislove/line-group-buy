@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>開發測試環境 — 後台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=20261124p">
+</head>
+<body>
+<div style="position:fixed;top:0;left:0;right:0;background:#E07A5F;color:#fff;text-align:center;padding:4px;font-size:0.8rem;z-index:1000;letter-spacing:1px;">
+  🧪 開發測試環境 ｜ <a href="admin.html" style="color:#fff;text-decoration:underline;">回正式後台</a>
+</div>
+<header style="margin-top:28px;">
+  <h1>開發測試環境｜後台</h1>
+  <div class="header-tools">
+    <span class="sub" id="roleLabel"></span>
+    <a href="manual.html" target="_blank" class="logout-btn" id="manualBtn" style="display:none;text-decoration:none;">📘 操作手冊</a>
+    <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="logout()">登出</button>
+  </div>
+</header>
+
+<div id="loading"><div class="spinner"></div><div id="loadingText">載入中…</div></div>
+
+<div id="formModal" class="modal">
+  <div class="modal-content">
+    <h3 id="formTitle">編輯</h3>
+    <div id="formFields"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeForm()">取消</button>
+      <button class="btn" id="formSaveBtn">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="container" id="main">
+  <div class="card" id="loginBox">
+    <h3>管理登入</h3>
+    <label>密碼</label>
+    <input type="password" id="pwd" placeholder="請輸入密碼">
+    <div style="margin-top:12px;">
+      <button class="btn" id="loginBtn">登入</button>
+    </div>
+  </div>
+
+  <div id="adminArea" style="display:none;">
+    <div class="tabs">
+      <div class="tab active" data-tab="weeks">📅 週期與排班</div>
+      <div class="tab" data-tab="vendors">🛒 代購商家</div>
+      <div class="tab" data-tab="stalls">🏪 現場攤位</div>
+      <div class="tab" data-tab="orders">🧾 訂單</div>
+      <div class="tab" data-tab="report">📊 報表</div>
+      <div class="tab" data-tab="settings" id="tabSettings" style="display:none;">⚙️ 系統設定</div>
+    </div>
+    <div id="tabContent"></div>
+  </div>
+</div>
+
+<script src="js/dev-config.js?v=20261124p"></script>
+<script src="js/api.js?v=20261124p"></script>
+<script src="js/admin.js?v=20261124p"></script>
+<script src="js/scroll-top.js?v=20261124p"></script>
+</body>
+</html>

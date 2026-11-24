@@ -570,6 +570,88 @@ function migrateSchema_v1_4() {
   return '🎉 v1.4 遷移完成！\n\n' + log.join('\n');
 }
 
+// ---------- 一鍵初始化全新試算表（新環境用） ----------
+// 跑一次就把所有分頁、欄位、初始 Settings 都建好
+function initFreshSchema() {
+  const log = [];
+  function ensureSheet(name, headers) {
+    let sh = SS.getSheetByName(name);
+    if (!sh) {
+      sh = SS.insertSheet(name);
+      sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+      log.push('✅ 建立分頁 ' + name);
+    } else {
+      // 補齊缺的欄位
+      const first = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0];
+      const missing = headers.filter(h => first.indexOf(h) === -1);
+      if (missing.length) {
+        const start = sh.getLastColumn() + 1;
+        sh.getRange(1, start, 1, missing.length).setValues([missing]);
+        log.push('✅ ' + name + ' 補欄位：' + missing.join(', '));
+      } else {
+        log.push('✓ ' + name + ' 已存在');
+      }
+    }
+    return sh;
+  }
+  ensureSheet('Settings', ['key', 'value']);
+  ensureSheet('Weeks', ['week_id', 'start_date', 'deadline', 'status']);
+  ensureSheet('Vendors', ['vendor_id', 'name', 'has_fee', 'fee_amount', 'fee_type', 'active', 'image_url']);
+  ensureSheet('Stalls', ['stall_id', 'name', 'active', 'image_url']);
+  ensureSheet('Items', ['item_id', 'parent_type', 'parent_id', 'name', 'price', 'unit', 'active', 'image_url']);
+  ensureSheet('Orders', ['order_id', 'week_id', 'customer_name', 'phone', 'item_id', 'qty', 'subtotal', 'created_at', 'note']);
+  ensureSheet('WeekVendors', ['wv_id', 'week_id', 'vendor_id']);
+  ensureSheet('WeekStalls', ['ws_id', 'week_id', 'stall_id']);
+  ensureSheet('Orders_Archive', ['order_id', 'week_id', 'customer_name', 'phone', 'item_id', 'qty', 'subtotal', 'created_at', 'note', 'deleted_at']);
+
+  // Settings 預設值（只在沒有時加）
+  const existing = new Set(readAll('Settings').map(r => r.key));
+  const sh = sheet('Settings');
+  const defaults = [
+    ['super_admin_password', 'change_me_super'],
+    ['admin_password', 'change_me_admin'],
+    ['site_title', '我的團購'],
+    ['site_subtitle', ''],
+    ['share_prefix', '我剛剛下單囉：'],
+    ['line_channel_access_token', ''],
+    ['line_notify_to', ''],
+    ['turnstile_secret', '']
+  ];
+  defaults.forEach(([k, v]) => {
+    if (!existing.has(k)) { sh.appendRow([k, v]); log.push('✅ Settings：' + k); }
+  });
+
+  // 建立本週 + 下週的週期
+  const d = new Date();
+  const dow = d.getDay();
+  const daysToNextMon = ((8 - dow) % 7) || 7;
+  for (let n = 0; n < 2; n++) {
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + daysToNextMon + n * 7);
+    const weekId = 'W' + Utilities.formatDate(monday, 'Asia/Taipei', 'yyyyMMdd');
+    const exists = readAll('Weeks').some(w => w.week_id === weekId);
+    if (!exists) {
+      const deadline = new Date(monday);
+      deadline.setDate(monday.getDate() - 1); // 前一天週日
+      deadline.setHours(17, 0, 0);
+      sheet('Weeks').appendRow([
+        weekId,
+        Utilities.formatDate(monday, 'Asia/Taipei', 'yyyy-MM-dd'),
+        Utilities.formatDate(deadline, 'Asia/Taipei', 'yyyy-MM-dd HH:mm:ss'),
+        'open'
+      ]);
+      log.push('✅ 建立週期 ' + weekId);
+    }
+  }
+
+  // phone 欄位設文字格式
+  const ordersSh = SS.getSheetByName('Orders');
+  if (ordersSh) ordersSh.getRange(1, 4, ordersSh.getMaxRows(), 1).setNumberFormat('@');
+
+  return '🎉 全新試算表初始化完成\n\n' + log.join('\n') +
+    '\n\n下一步：\n1. 到 Settings 分頁改密碼\n2. 部署網頁應用程式 → 拿到網址貼給老師\n3. 老師幫您連進前後台';
+}
+
 // ---------- 一鍵套用範本：早餐/水果/烘焙 ----------
 const TEMPLATES = {
   breakfast: {
