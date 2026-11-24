@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 240" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5F7D5C"/>
+      <stop offset="1" stop-color="#7A9B76"/>
+    </linearGradient>
+    <linearGradient id="farGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8FAA8A" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#A8BFA4" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="midGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BFD3B9"/>
+      <stop offset="1" stop-color="#D5E2CF"/>
+    </linearGradient>
+    <linearGradient id="fieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E8EFE4"/>
+      <stop offset="1" stop-color="#F3EFE0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 天空（接 header 綠）-->
+  <rect width="1200" height="240" fill="url(#skyGrad)"/>
+
+  <!-- 遠處龜山島 -->
+  <path d="M 820 155 Q 870 110 920 125 Q 970 108 1010 130 Q 1055 148 1080 155 L 1080 170 L 820 170 Z"
+        fill="url(#farGrad)" opacity="0.7"/>
+  <ellipse cx="960" cy="165" rx="130" ry="6" fill="#8FAA8A" opacity="0.4"/>
+
+  <!-- 遠山稜線 -->
+  <path d="M 0 170 L 80 140 L 160 155 L 240 125 L 340 150 L 440 130 L 540 160 L 640 140 L 740 155 L 820 155 L 820 180 L 0 180 Z"
+        fill="url(#farGrad)"/>
+
+  <!-- 中景山丘 -->
+  <path d="M 0 185 Q 100 160 200 175 T 400 170 T 600 175 T 800 170 T 1000 175 T 1200 170 L 1200 200 L 0 200 Z"
+        fill="url(#midGrad)"/>
+
+  <!-- 田地 -->
+  <rect x="0" y="195" width="1200" height="45" fill="url(#fieldGrad)"/>
+
+  <!-- 田的分格線 -->
+  <g stroke="#B3C4AE" stroke-width="1.2" fill="none" opacity="0.5">
+    <path d="M 0 208 Q 300 204 600 208 T 1200 208"/>
+    <path d="M 0 220 Q 300 217 600 220 T 1200 220"/>
+    <path d="M 0 232 Q 300 229 600 232 T 1200 232"/>
+  </g>
+
+  <!-- 稻穗（散落）-->
+  <g fill="#D4A574">
+    <g transform="translate(90, 215)"><path d="M 0 0 L 0 -14" stroke="#B37A00" stroke-width="1.2"/><circle cx="-2" cy="-10" r="1.5"/><circle cx="2" cy="-7" r="1.5"/><circle cx="-2" cy="-4" r="1.5"/></g>
+    <g transform="translate(210, 218)"><path d="M 0 0 L 0 -12" stroke="#B37A00" stroke-width="1.2"/><circle cx="-2" cy="-9" r="1.4"/><circle cx="2" cy="-6" r="1.4"/><circle cx="-2" cy="-3" r="1.4"/></g>
+    <g transform="translate(680, 216)"><path d="M 0 0 L 0 -13" stroke="#B37A00" stroke-width="1.2"/><circle cx="-2" cy="-10" r="1.5"/><circle cx="2" cy="-7" r="1.5"/><circle cx="-2" cy="-4" r="1.5"/></g>
+    <g transform="translate(540, 219)"><path d="M 0 0 L 0 -11" stroke="#B37A00" stroke-width="1.2"/><circle cx="-2" cy="-8" r="1.4"/><circle cx="2" cy="-5" r="1.4"/></g>
+    <g transform="translate(980, 217)"><path d="M 0 0 L 0 -13" stroke="#B37A00" stroke-width="1.2"/><circle cx="-2" cy="-10" r="1.5"/><circle cx="2" cy="-7" r="1.5"/><circle cx="-2" cy="-4" r="1.5"/></g>
+  </g>
+
+  <!-- 小農市集攤位（逐一散落）-->
+  <!-- 攤位 1 -->
+  <g transform="translate(300, 180)">
+    <polygon points="-20 -8 0 -22 20 -8" fill="#E07A5F"/>
+    <rect x="-18" y="-8" width="36" height="14" fill="#F9F3E9" stroke="#B37A00" stroke-width="1"/>
+    <line x1="-18" y1="-8" x2="-18" y2="6" stroke="#B37A00" stroke-width="1.5"/>
+    <line x1="18" y1="-8" x2="18" y2="6" stroke="#B37A00" stroke-width="1.5"/>
+    <circle cx="-8" cy="-1" r="2" fill="#D4A574"/>
+    <circle cx="0" cy="-2" r="2" fill="#7A9B76"/>
+    <circle cx="8" cy="-1" r="2" fill="#E07A5F"/>
+  </g>
+
+  <!-- 攤位 2 -->
+  <g transform="translate(450, 182)">
+    <polygon points="-18 -6 0 -20 18 -6" fill="#D4A574"/>
+    <rect x="-16" y="-6" width="32" height="12" fill="#F9F3E9" stroke="#B37A00" stroke-width="1"/>
+    <circle cx="-6" cy="0" r="1.8" fill="#7A9B76"/>
+    <circle cx="2" cy="-1" r="1.8" fill="#D97757"/>
+    <circle cx="8" cy="0" r="1.8" fill="#D4A574"/>
+  </g>
+
+  <!-- 攤位 3 -->
+  <g transform="translate(730, 181)">
+    <polygon points="-22 -7 0 -22 22 -7" fill="#7A9B76"/>
+    <rect x="-20" y="-7" width="40" height="13" fill="#F9F3E9" stroke="#B37A00" stroke-width="1"/>
+    <circle cx="-12" cy="0" r="2" fill="#E07A5F"/>
+    <circle cx="-4" cy="-1" r="2" fill="#D4A574"/>
+    <circle cx="4" cy="0" r="2" fill="#7A9B76"/>
+    <circle cx="12" cy="-1" r="2" fill="#D97757"/>
+  </g>
+
+  <!-- 樹 x3 -->
+  <g>
+    <g transform="translate(150, 188)">
+      <rect x="-1" y="-5" width="2" height="8" fill="#5F4A3A"/>
+      <ellipse cx="0" cy="-10" rx="7" ry="9" fill="#7A9B76"/>
+    </g>
+    <g transform="translate(590, 189)">
+      <rect x="-1" y="-5" width="2" height="8" fill="#5F4A3A"/>
+      <ellipse cx="0" cy="-10" rx="8" ry="10" fill="#5F7D5C"/>
+    </g>
+    <g transform="translate(880, 187)">
+      <rect x="-1" y="-5" width="2" height="8" fill="#5F4A3A"/>
+      <ellipse cx="0" cy="-10" rx="7" ry="10" fill="#7A9B76"/>
+    </g>
+  </g>
+
+  <!-- 飛鳥（遠處）-->
+  <g stroke="#3D3B37" stroke-width="1.3" fill="none" stroke-linecap="round" opacity="0.5">
+    <path d="M 420 90 Q 424 86 428 90 Q 432 86 436 90"/>
+    <path d="M 500 76 Q 503 73 506 76 Q 509 73 512 76"/>
+    <path d="M 580 92 Q 583 89 586 92 Q 589 89 592 92"/>
+  </g>
+</svg>

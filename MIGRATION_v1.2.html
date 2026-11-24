@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-TW"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v1.2 試算表結構遷移</title><style>
+@page { size: A4; margin: 15mm 14mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Microsoft JhengHei", "微軟正黑體", "Noto Sans TC", sans-serif;
+  font-size: 12.5pt; line-height: 1.75; color: #1a1a1a; background: #fff;
+  max-width: 820px; margin: 24px auto; padding: 0 20px;
+}
+h1 { font-size: 20pt; border-bottom: 3px solid #1f4e79; padding-bottom: 6px; color: #1f4e79; }
+h2 { font-size: 15.5pt; margin-top: 1.6em; border-left: 6px solid #1f4e79; padding-left: 10px; color: #1f4e79; }
+h3 { font-size: 13.5pt; margin-top: 1.3em; }
+h1, h2, h3 { page-break-after: avoid; break-after: avoid; }
+p, li { orphans: 3; widows: 3; }
+li { margin: 3px 0; }
+strong { color: #000; background: #fff3b0; padding: 0 2px; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; page-break-inside: avoid; font-size: 11.5pt; }
+th, td { border: 1px solid #888; padding: 6px 8px; vertical-align: top; }
+th { background: #e8eef5; }
+tr:nth-child(even) td { background: #fafafa; }
+code { font-family: Consolas, monospace; background: #f1f1f1; padding: 1px 4px; border-radius: 3px; font-size: 0.92em; }
+pre { background: #f5f5f5; border: 1px solid #ddd; padding: 10px; white-space: pre-wrap; word-break: break-all; page-break-inside: avoid; }
+pre code { background: none; padding: 0; }
+blockquote { border-left: 4px solid #c00; background: #fff5f5; margin: 10px 0; padding: 6px 12px; }
+hr { border: none; border-top: 1px dashed #999; margin: 18px 0; }
+a { color: #1f4e79; }
+input[type=checkbox] { transform: scale(1.3); margin-right: 6px; }
+.toolbar { position: sticky; top: 0; background: #fff; padding: 8px 0; text-align: right; border-bottom: 1px solid #eee; }
+.toolbar button { font-size: 12pt; padding: 6px 18px; cursor: pointer; }
+@media print {
+  .toolbar { display: none; }
+  body { margin: 0; padding: 0; max-width: none; }
+  a { color: #000; text-decoration: none; }
+  strong { background: none; }
+}
+</style></head>
+<body><div class="toolbar"><button onclick="window.print()">🖨️ 列印</button></div>
+<h1>v1.2 試算表結構遷移</h1>
+<p><strong>為什麼要改</strong>：原本「商家＝一週綁一個 ID」的模型不符合實務，改成「商家永久存在、每週勾選是否出現」。</p>
+<h2>試算表要改的事（照順序做）</h2>
+<h3>1. Vendors 分頁：刪一欄</h3>
+<ul>
+<li>點 <code>week_id_source</code> 那一欄（<strong>E 欄</strong>）→ 右鍵 → 刪除欄</li>
+<li>改完剩 5 欄：<code>vendor_id | name | has_fee | fee_amount | active</code></li>
+</ul>
+<h3>2. Stalls 分頁：刪兩欄</h3>
+<ul>
+<li>刪 <code>week_id</code>（<strong>B 欄</strong>）</li>
+<li>刪 <code>weekday</code>（<strong>原 C 欄，刪 B 後變 B 欄</strong>）</li>
+<li>改完剩 3 欄：<code>stall_id | name | active</code></li>
+</ul>
+<h3>3. Items 分頁：刪一欄</h3>
+<ul>
+<li>刪 <code>week_id</code>（<strong>D 欄</strong>）</li>
+<li>改完剩 7 欄：<code>item_id | parent_type | parent_id | name | price | unit | active</code></li>
+</ul>
+<h3>4. 新開 WeekVendors 分頁</h3>
+<ul>
+<li>底下工作表加「➕」→ 改名 <code>WeekVendors</code></li>
+<li>A1 貼標題列：</li>
+</ul>
+<pre><code>wv_id   week_id vendor_id
+</code></pre>
+<ul>
+<li>測試資料（A2 開始，為了讓既有的 V001 阿嬤水餃能在 W20261130 出現）：</li>
+</ul>
+<pre><code>WV001   W20261130   V001
+</code></pre>
+<h3>5. 新開 WeekStalls 分頁</h3>
+<ul>
+<li>加「➕」→ 改名 <code>WeekStalls</code></li>
+<li>A1 貼標題列：</li>
+</ul>
+<pre><code>ws_id   week_id stall_id
+</code></pre>
+<ul>
+<li>測試資料：</li>
+</ul>
+<pre><code>WS001   W20261130   S001
+</code></pre>
+<h3>6. 重新部署 Apps Script</h3>
+<p>一樣的方法：
+1. 回 Apps Script 編輯器，把 <code>Code.gs</code> 全部清空重貼最新版
+2. 存檔
+3. 部署 → 管理部署作業 → ✏️ → 新版本 → 部署
+4. 網址<strong>不變</strong></p>
+<h2>做完之後可以測什麼</h2>
+<ul>
+<li>進後台 <code>admin.html</code> → 📅 週期與排班</li>
+<li>點 W20261130 的「設定排班」→ 看到阿嬤水餃、週一早餐車都被勾起來 ✅</li>
+<li>進 🛒 代購商家 → 點「管理商品」→ 可以新增、編輯、刪除商品</li>
+<li>新增/編輯任何東西時：跳出來的是「漂亮的彈窗表單」有真正的下拉選單</li>
+</ul>
+</body></html>
