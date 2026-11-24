@@ -97,6 +97,13 @@ function isTrue(v) { return v === true || v === 'TRUE' || v === 'true'; }
 function getPublic() {
   const weekId = currentWeekId();
   const week = readAll('Weeks').find(r => r.week_id === weekId) || null;
+  // 公開的網站設定（不含密碼與 token）
+  const s = settings();
+  const publicSettings = {
+    site_title:     s.site_title     || 'LINE 團購代購',
+    site_subtitle:  s.site_subtitle  || '',
+    share_prefix:   s.share_prefix   || '我剛剛下單囉：'
+  };
 
   const allVendors = readAll('Vendors').filter(r => isTrue(r.active));
   const allStalls  = readAll('Stalls').filter(r => isTrue(r.active));
@@ -117,7 +124,8 @@ function getPublic() {
 
   return {
     weekId, week, vendors, stalls, items,
-    locked: week ? isWeekLocked(weekId) : true
+    locked: week ? isWeekLocked(weekId) : true,
+    publicSettings
   };
 }
 

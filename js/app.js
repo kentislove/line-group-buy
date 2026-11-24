@@ -17,6 +17,10 @@ async function init() {
   try {
     const data = await API.call('getPublic');
     Object.assign(state, data);
+    // 套用後台設定的網站名稱
+    const title = data.publicSettings?.site_title || window.APP_CONFIG.SITE_TITLE;
+    document.title = title;
+    document.getElementById('siteTitle').textContent = title;
     render();
   } catch (e) {
     document.getElementById('main').innerHTML = `<div class="card" style="color:#e74c3c">載入失敗：${e.message}</div>`;
@@ -207,7 +211,9 @@ document.getElementById('submitOrderBtn').onclick = async () => {
       weekId: state.weekId, customerName: name, phone, note, items
     });
     const total = items.reduce((a,b)=>a+b.subtotal,0);
-    const summary = `${window.APP_CONFIG.OWNER_LINE_SHARE_PREFIX}\n訂單 ${res.orderId}\n購買人：${name}${phone?' ('+phone+')':''}\n${items.map(i=>`・${i.name} x${i.qty} = $${i.subtotal}`).join('\n')}\n合計 $${total}`;
+    const sharePrefix = state.publicSettings?.share_prefix || window.APP_CONFIG.OWNER_LINE_SHARE_PREFIX;
+    const siteTitle = state.publicSettings?.site_title || window.APP_CONFIG.SITE_TITLE;
+    const summary = `${sharePrefix}\n【${siteTitle}】\n訂單 ${res.orderId}\n購買人：${name}${phone?' ('+phone+')':''}\n${items.map(i=>`・${i.name} x${i.qty} = $${i.subtotal}`).join('\n')}\n合計 $${total}`;
     showSuccessModal(res.orderId, total, summary);
     state.cart = {};
     render();
