@@ -7,6 +7,8 @@ let token = sessionStorage.getItem('adm_token') || '';
 let role = sessionStorage.getItem('adm_role') || '';
 let cache = {};
 let currentTab = 'weeks';
+// 功能開關：只有 dev-config.js 會打開，正式版 config.js 沒寫就全部關閉
+const FEATURES = (window.APP_CONFIG && window.APP_CONFIG.FEATURES) || {};
 let expandedWeek = null;   // 週期分頁：目前展開的週 ID
 let drillParent = null;    // 代購商家/攤位分頁：點進去管理商品時的父節點 {type, id, name}
 
@@ -145,6 +147,8 @@ async function showAdmin() {
   });
   await loadAll();
   renderTab();
+  // 給只在開發版載入的 onboarding.js 接手（正式版沒人聽，不影響）
+  document.dispatchEvent(new Event('admin:ready'));
 }
 async function loadAll() {
   showLoading('載入資料中…');
@@ -266,7 +270,7 @@ function renderParents(el, type) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick='openQuickForm("${sheet}")'>⚡ 快速新增${isVendor?'商家':'攤位'}</button>
       <button class="btn btn-ghost" onclick='openForm("${sheet}", ${JSON.stringify(cols).replace(/"/g,'&quot;')})'>➕ 完整新增（進階）</button>
-      ${isVendor ? `<button class="btn btn-ghost" onclick='openTemplatePicker()' style="background:#FFF8E1;color:#8B6914;border-color:#F4D37A;">📋 用範本一鍵建</button>` : ''}
+      ${isVendor && FEATURES.templates ? `<button class="btn btn-ghost" onclick='openTemplatePicker()' style="background:#FFF8E1;color:#8B6914;border-color:#F4D37A;">📋 用範本一鍵建</button>` : ''}
     </div>
     <div class="admin-list">`;
 

@@ -5,5 +5,11 @@ window.APP_CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbx-zlq8PnOnyk5VKgj739_ajSz5w-xyFD1E43KoZWWMiaGrWglCtwpYL2hdsItKp6ulFw/exec',
   SITE_TITLE: '開發測試環境',
   OWNER_LINE_SHARE_PREFIX: '測試單：',
-  TURNSTILE_SITE_KEY: '0x4AAAAAAGQeuxPWkm_fvSdu'
+  TURNSTILE_SITE_KEY: '0x4AAAAAAGQeuxPWkm_fvSdu',
+  // 新功能開關（正式版 config.js 沒有這段，等於全關）
+  FEATURES: {
+    templates: true,   // 後台「用範本一鍵建」
+    onboarding: true,  // 後台新手導引
+    bigText: true      // 大字大按鈕模式預設開啟
+  }
 };

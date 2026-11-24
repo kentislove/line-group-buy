@@ -568,6 +568,76 @@ tr:hover td { background: #FBF7EC; }
   .admin-card-title { font-size: 1rem; }
 }
 
+/* ---------- 新手導引（onboarding.js 才會用到） ---------- */
+.ob-box { max-width: 560px; }
+.ob-overlay.no-anim, .ob-overlay.no-anim .modal-content { animation: none; }
+.ob-lead { color: var(--muted); margin: -6px 0 14px; line-height: 1.7; }
+.ob-step {
+  display: flex; gap: 14px; padding: 14px 4px;
+  border-bottom: 1px dashed var(--border);
+}
+.ob-step:last-of-type { border-bottom: none; }
+.ob-no {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--surface); color: var(--primary-dark);
+  font-family: "Noto Serif TC", serif; font-size: 1.3rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--primary);
+}
+.ob-step.is-done .ob-no { background: var(--primary); color: #fff; }
+.ob-step.is-done .ob-title { color: var(--muted); text-decoration: line-through; }
+.ob-body { flex: 1; min-width: 0; }
+.ob-title { font-weight: 700; font-size: 1.08rem; color: var(--title); }
+.ob-desc { color: var(--muted); font-size: 0.92rem; margin: 2px 0 10px; line-height: 1.6; }
+.ob-go { padding: 10px 20px; }
+.ob-foot {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.ob-foot a { color: var(--primary-dark); font-weight: 600; }
+.ob-foot-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.ob-foot-btns .btn { padding: 8px 14px; font-size: 0.9rem; }
+
+/* ---------- 大字模式切換鈕（ux.js 才會用到） ---------- */
+.big-ui-toggle {
+  position: fixed; left: 16px; bottom: 20px; z-index: 60;
+  background: #fff; color: var(--primary-dark);
+  border: 1.5px solid var(--primary); border-radius: 999px;
+  padding: 8px 14px; font-weight: 700; font-size: 0.9rem; font-family: inherit;
+  box-shadow: var(--shadow); cursor: pointer;
+}
+body[data-page="front"] .big-ui-toggle { bottom: 90px; }
+@media print { .big-ui-toggle { display: none !important; } }
+
+/* ---------- 大字大按鈕模式：html.big-ui ---------- */
+html.big-ui { font-size: 18px; }
+html.big-ui body { line-height: 1.75; }
+html.big-ui .btn { padding: 13px 26px; font-size: 1.08rem; min-height: 48px; }
+html.big-ui .tab { padding: 12px 18px; font-size: 1rem; }
+html.big-ui input, html.big-ui select, html.big-ui textarea { font-size: 1.1rem; padding: 13px 14px; }
+html.big-ui label { font-size: 1rem; }
+html.big-ui .item-pic { width: 84px; height: 84px; }
+html.big-ui .item-name { font-size: 1.1rem; }
+html.big-ui .item-price { font-size: 1.25rem; }
+html.big-ui .qty-ctrl button { width: 44px; height: 44px; font-size: 1.5rem; }
+html.big-ui .qty-ctrl input { width: 44px; height: 44px; font-size: 1.2rem; }
+html.big-ui .summary .btn { padding: 14px 26px; font-size: 1.15rem; }
+html.big-ui .total-amt { font-size: 1.9rem; }
+html.big-ui .admin-fields dt { font-size: 0.95rem; }
+html.big-ui .admin-fields dd { font-size: 1.05rem; }
+html.big-ui .admin-card-actions .btn { padding: 11px 18px; font-size: 1rem; }
+html.big-ui .checkbox-row input[type=checkbox] { width: 28px; height: 28px; }
+html.big-ui .checkbox-row label { font-size: 1.1rem; }
+html.big-ui .logout-btn { padding: 7px 16px; font-size: 0.95rem; }
+@media (max-width: 480px) {
+  html.big-ui { font-size: 17px; }
+  html.big-ui .item-pic { width: 70px; height: 70px; }
+  html.big-ui .qty-ctrl button { width: 40px; height: 40px; }
+  html.big-ui .qty-ctrl input { width: 36px; height: 40px; }
+  html.big-ui .item-row { flex-wrap: wrap; }
+  html.big-ui .item-row .qty-ctrl { margin-left: auto; }
+}
+
 /* ---------- 回到最上面 ---------- */
 .scroll-top-btn {
   position: fixed;

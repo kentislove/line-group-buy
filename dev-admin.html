@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261124p">
+<link rel="stylesheet" href="css/style.css?v=20261125a">
 </head>
 <body>
 <div style="position:fixed;top:0;left:0;right:0;background:#E07A5F;color:#fff;text-align:center;padding:4px;font-size:0.8rem;z-index:1000;letter-spacing:1px;">
@@ -17,6 +17,8 @@
   <h1>開發測試環境｜後台</h1>
   <div class="header-tools">
     <span class="sub" id="roleLabel"></span>
+    <button class="logout-btn" id="copyLinkBtn" style="display:none;background:#fff;color:#5F7D5C;">🔗 複製下單網址</button>
+    <button class="logout-btn" id="guideBtn" style="display:none;">🧭 新手導引</button>
     <a href="manual.html" target="_blank" class="logout-btn" id="manualBtn" style="display:none;text-decoration:none;">📘 操作手冊</a>
     <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="logout()">登出</button>
   </div>
@@ -58,9 +60,11 @@
   </div>
 </div>
 
-<script src="js/dev-config.js?v=20261124p"></script>
-<script src="js/api.js?v=20261124p"></script>
-<script src="js/admin.js?v=20261124p"></script>
-<script src="js/scroll-top.js?v=20261124p"></script>
+<script src="js/dev-config.js?v=20261125a"></script>
+<script src="js/api.js?v=20261125a"></script>
+<script src="js/ux.js?v=20261125a"></script>
+<script src="js/onboarding.js?v=20261125a"></script>
+<script src="js/admin.js?v=20261125a"></script>
+<script src="js/scroll-top.js?v=20261125a"></script>
 </body>
 </html>
