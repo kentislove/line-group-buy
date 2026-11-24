@@ -24,6 +24,18 @@ const SHEET_TITLES = {
   Stalls: '🏪 現場攤位', Items: '📦 商品', Orders: '🧾 訂單'
 };
 
+// 快速新增只問這幾樣，其他自動帶
+const QUICK_FIELDS = {
+  Vendors: ['name', 'has_fee', 'fee_amount', 'fee_type', 'image_url'],
+  Stalls:  ['name', 'image_url'],
+  Items:   ['name', 'price', 'unit', 'image_url']
+};
+const QUICK_DEFAULTS = {
+  Vendors: { active: 'TRUE', has_fee: 'FALSE', fee_amount: 0, fee_type: 'flat' },
+  Stalls:  { active: 'TRUE' },
+  Items:   { active: 'TRUE', unit: '個' }
+};
+
 // ---------- 欄位型態（決定表單 input） ----------
 const FIELD_META = {
   Weeks: {
@@ -250,7 +262,10 @@ function renderParents(el, type) {
   let html = `<div class="card">
     <h3>${title} <span style="font-size:0.75rem;color:#888;font-weight:normal;">(${list.length} 筆)</span></h3>
     <div style="color:#666;font-size:0.85rem;margin-bottom:10px;">※ 這裡是「永久清單」。要排哪一週有出現，去 📅 週期與排班 分頁勾選。</div>
-    <button class="btn" onclick='openForm("${sheet}", ${JSON.stringify(cols).replace(/"/g,'&quot;')})'>➕ 新增${isVendor?'商家':'攤位'}</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick='openQuickForm("${sheet}")'>⚡ 快速新增${isVendor?'商家':'攤位'}</button>
+      <button class="btn btn-ghost" onclick='openForm("${sheet}", ${JSON.stringify(cols).replace(/"/g,'&quot;')})'>➕ 完整新增（進階）</button>
+    </div>
     <div class="admin-list">`;
 
   if (!list.length) {
@@ -323,7 +338,10 @@ function renderItemsOfParent(el, type) {
       <h3>📦 ${drillParent.name} 的商品 <span style="font-size:0.75rem;color:#888;font-weight:normal;">(${items.length} 筆)</span></h3>
       <button class="btn btn-ghost" onclick="drillParent=null; renderTab();">← 回${parentLabel}清單</button>
     </div>
-    <button class="btn" onclick='openItemForm()'>➕ 新增商品</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick='openQuickItemForm()'>⚡ 快速新增商品</button>
+      <button class="btn btn-ghost" onclick='openItemForm()'>➕ 完整新增（進階）</button>
+    </div>
     <div class="admin-list">`;
 
   if (!items.length) {
@@ -356,12 +374,27 @@ function renderItemsOfParent(el, type) {
 window.openItemForm = function(row) {
   const cols = Object.keys(FIELD_META.Items);
   const r = {...(row || {})};
-  // 強制 parent_type / parent_id
   r.parent_type = drillParent.type;
   r.parent_id = drillParent.id;
-  openForm('Items', cols, r, {
-    lockedFields: ['parent_type', 'parent_id']
-  });
+  openForm('Items', cols, r, { lockedFields: ['parent_type', 'parent_id'] });
+};
+
+// 🆕 快速新增商家/攤位
+window.openQuickForm = function(sheet) {
+  const cols = QUICK_FIELDS[sheet] || Object.keys(FIELD_META[sheet]);
+  const defaults = QUICK_DEFAULTS[sheet] || {};
+  openForm(sheet, cols, defaults, { quick: true });
+};
+
+// 🆕 快速新增商品（parent_type/id 自動帶）
+window.openQuickItemForm = function() {
+  const cols = QUICK_FIELDS.Items;
+  const row = {
+    ...QUICK_DEFAULTS.Items,
+    parent_type: drillParent.type,
+    parent_id: drillParent.id
+  };
+  openForm('Items', cols, row, { quick: true, hiddenDefaults: ['parent_type','parent_id','active'] });
 };
 
 // ---------- 彈窗表單 ----------
@@ -369,7 +402,8 @@ function openForm(sheetName, cols, row, opts) {
   opts = opts || {};
   const isEdit = !!(row && row[cols[0]]);
   const data = {...(row || {})};
-  document.getElementById('formTitle').textContent = (isEdit ? '編輯' : '新增') + '｜' + (SHEET_TITLES[sheetName] || sheetName);
+  const titlePrefix = opts.quick ? '⚡ 快速新增' : (isEdit ? '編輯' : '新增');
+  document.getElementById('formTitle').textContent = titlePrefix + '｜' + (SHEET_TITLES[sheetName] || sheetName);
 
   const fieldsHtml = cols.map(c => renderField(sheetName, c, data[c], opts.lockedFields && opts.lockedFields.includes(c))).join('');
   document.getElementById('formFields').innerHTML = fieldsHtml;
