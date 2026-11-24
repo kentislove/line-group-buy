@@ -40,7 +40,7 @@ function render() {
   }
 
   // 代購商家
-  html += `<div class="section-title">🛒 團購代購（事先預訂，到現場領取）</div>`;
+  html += `<div class="section-title">🛒 團購代購｜事先預訂　當天領取</div>`;
   if (!state.vendors.length) html += `<div class="card">目前無代購商家</div>`;
   state.vendors.forEach(v => {
     const its = state.items.filter(it => it.parent_type === 'vendor' && it.parent_id === v.vendor_id);
@@ -64,7 +64,7 @@ function render() {
   });
 
   // 現場攤位（本週一擺攤）
-  html += `<div class="section-title">🏪 現場攤位預訂（取貨當天直接買）</div>`;
+  html += `<div class="section-title">🏪 現場攤位｜取貨日擺攤　現場買</div>`;
   if (!state.stalls.length) html += `<div class="card">本週無攤位排班</div>`;
   state.stalls.forEach(s => {
     const its = state.items.filter(it => it.parent_type === 'stall' && it.parent_id === s.stall_id);
@@ -233,9 +233,8 @@ function showSuccessModal(orderId, total, summary) {
   const html = `
     <div id="successOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;">
       <div style="background:#FFFEFB;border-radius:20px;padding:24px;max-width:420px;width:100%;box-shadow:0 8px 28px rgba(0,0,0,0.2);text-align:center;animation:slideUp 0.25s;">
-        <div style="font-size:3rem;">🎉</div>
-        <h2 style="margin:8px 0;color:#2B2824;font-family:'Noto Serif TC',serif;">下單成功</h2>
-        <div style="color:#8A8679;font-size:0.85rem;margin-bottom:12px;">訂單編號 ${orderId}</div>
+        <h2 style="margin:4px 0 2px;color:#2B2824;font-family:'Noto Serif TC',serif;">訂單完成</h2>
+        <div style="color:#8A8679;font-size:0.85rem;margin-bottom:14px;">${orderId}</div>
         <div style="background:#F5EDE0;border-radius:12px;padding:12px;font-size:0.9rem;text-align:left;white-space:pre-wrap;max-height:200px;overflow-y:auto;font-family:monospace;color:#3D3B37;">${summary}</div>
         <div style="margin-top:14px;font-size:1.3rem;color:#5F7D5C;font-family:'Noto Serif TC',serif;font-weight:700;">合計 $${total}</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px;">
@@ -243,7 +242,7 @@ function showSuccessModal(orderId, total, summary) {
           <button class="btn btn-ghost" onclick="copyOrder(\`${summary.replace(/`/g,'\\\`')}\`)">📋 複製訂單明細</button>
           <button class="btn btn-ghost" onclick="document.getElementById('successOverlay').remove()" style="border-color:#C67B6A;color:#C67B6A;">關閉</button>
         </div>
-        <div style="font-size:0.75rem;color:#8A8679;margin-top:12px;">※ 手機點「分享到 LINE」會直接開 LINE；電腦會打開 LINE 網頁版</div>
+        <div style="font-size:0.75rem;color:#8A8679;margin-top:12px;">分享會直接開 LINE 聊天室讓您挑收件人</div>
       </div>
     </div>`;
   const wrap = document.createElement('div');

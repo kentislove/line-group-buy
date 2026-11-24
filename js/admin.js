@@ -132,6 +132,7 @@ async function showAdmin() {
   document.getElementById('adminArea').style.display = 'block';
   document.getElementById('roleLabel').textContent = role === 'super' ? '超級管理者' : '管理者（團購主）';
   document.getElementById('logoutBtn').style.display = '';
+  document.getElementById('manualBtn').style.display = '';
   document.getElementById('tabSettings').style.display = role === 'super' ? '' : 'none';
   document.querySelectorAll('.tab').forEach(t => {
     t.onclick = () => {
@@ -218,11 +219,11 @@ function renderWeekSchedule(weekId) {
 
   return `
     <div class="schedule-box">
-      <h4>🛒 本週代購商家（勾選即出現在前台）</h4>
+      <h4>🛒 本週代購商家｜勾起來的會在前台出現</h4>
       ${vHtml}
     </div>
     <div class="schedule-box" style="margin-top:8px;">
-      <h4>🏪 本週擺攤攤位（週一取貨日來擺攤）</h4>
+      <h4>🏪 本週擺攤攤位｜取貨當天來現場</h4>
       ${sHtml}
     </div>
     <div style="text-align:right;margin-top:10px;">
@@ -261,7 +262,7 @@ function renderParents(el, type) {
 
   let html = `<div class="card">
     <h3>${title} <span style="font-size:0.75rem;color:#888;font-weight:normal;">(${list.length} 筆)</span></h3>
-    <div style="color:#666;font-size:0.85rem;margin-bottom:10px;">※ 這裡是「永久清單」。要排哪一週有出現，去 📅 週期與排班 分頁勾選。</div>
+    <div style="color:#666;font-size:0.85rem;margin-bottom:10px;">這份是永久清單。哪週會出現在前台，去「📅 週期與排班」分頁勾選。</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick='openQuickForm("${sheet}")'>⚡ 快速新增${isVendor?'商家':'攤位'}</button>
       <button class="btn btn-ghost" onclick='openForm("${sheet}", ${JSON.stringify(cols).replace(/"/g,'&quot;')})'>➕ 完整新增（進階）</button>
@@ -269,7 +270,7 @@ function renderParents(el, type) {
     <div class="admin-list">`;
 
   if (!list.length) {
-    html += `<div class="empty-state"><span class="icon">📭</span>尚無${isVendor?'商家':'攤位'}，請先按「新增」</div>`;
+    html += `<div class="empty-state"><span class="icon">📭</span>還沒有${isVendor?'商家':'攤位'}</div>`;
   }
 
   list.forEach(r => {
@@ -345,7 +346,7 @@ function renderItemsOfParent(el, type) {
     <div class="admin-list">`;
 
   if (!items.length) {
-    html += `<div class="empty-state"><span class="icon">📦</span>尚無商品，請按「新增商品」</div>`;
+    html += `<div class="empty-state"><span class="icon">📦</span>還沒有商品</div>`;
   }
 
   items.forEach(it => {
@@ -764,7 +765,7 @@ function renderSettings(el) {
   };
   let html = `<div class="card">
     <h3>⚙️ 系統設定</h3>
-    <div style="color:#666;font-size:0.85rem;margin-bottom:12px;">※ 密碼、LINE token 等建議只「編輯」，不建議新增或刪除。</div>
+    <div style="color:#666;font-size:0.85rem;margin-bottom:12px;">密碼和 LINE token 這類項目只建議修改，不要新增或刪掉。</div>
     <div class="admin-list">`;
   rows.forEach(r => {
     const desc = descriptions[r.key] || '';
