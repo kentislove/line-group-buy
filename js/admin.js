@@ -575,10 +575,9 @@ function renderOrders(el) {
 }
 window.delOrder = async function(orderId) {
   if (!confirm(`確定要整筆刪除訂單 ${orderId}？`)) return;
-  const rows = (cache.orders || []).filter(o => o.order_id === orderId);
   showLoading('刪除中…');
   try {
-    for (const r of rows) await API.call('adminDelete', { token, sheet: 'Orders', id: r.order_id });
+    await API.call('deleteOrder', { token, orderId });
     await loadAll();
     renderTab();
   } catch (e) { alert(e.message); }
@@ -643,7 +642,72 @@ async function renderReport(el) {
 }
 
 window.printReport = function() {
-  window.print();
+  const r = window._lastReport;
+  if (!r) return alert('沒有報表資料');
+  // 檢測是否為手機/內建瀏覽器
+  const isMobile = /Mobi|Android|iPhone|iPad|Line\/|FB|Instagram/.test(navigator.userAgent);
+  const grand = r.customers.reduce((a,c)=>a+c.total,0);
+  const customerHtml = r.customers.map(c => `
+    <div class="cust">
+      <div class="cust-head"><b>${c.name}</b>${c.phone ? ` <span class="phone">📞 ${c.phone}</span>` : ''}</div>
+      <table>
+        <thead><tr><th>來源</th><th>品項</th><th class="r">數量</th><th class="r">小計</th></tr></thead>
+        <tbody>${c.rows.map(x => `<tr><td class="src">${x.source}</td><td>${x.itemName}</td><td class="r">${x.qty}</td><td class="r">$${x.subtotal}</td></tr>`).join('')}</tbody>
+      </table>
+      <div class="sub">個人總計 <b>$${c.total}</b></div>
+    </div>`).join('');
+  const docHtml = `<!DOCTYPE html>
+<html lang="zh-TW"><head>
+<meta charset="UTF-8"><title>團購報表 ${r.weekId}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif; color:#222; padding:20px; max-width:800px; margin:0 auto; background:#fff; }
+  h1 { margin:4px 0; font-size:1.3rem; text-align:center; }
+  .meta { text-align:center; color:#666; font-size:0.85rem; margin-bottom:16px; }
+  .cust { border-top:1px dashed #bbb; padding:12px 0; page-break-inside:avoid; }
+  .cust-head { font-size:1.05rem; margin-bottom:6px; }
+  .cust-head .phone { color:#555; font-weight:400; margin-left:8px; font-size:0.9rem; }
+  table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+  th,td { padding:5px 8px; border:1px solid #ccc; }
+  th { background:#f3f3f3; }
+  td.r, th.r { text-align:right; }
+  td.src { color:#666; font-size:0.85rem; }
+  .sub { text-align:right; margin-top:6px; }
+  .sub b { color:#2d8f4f; font-size:1.1rem; }
+  .grand { border-top:2px solid #2d8f4f; margin-top:16px; padding-top:10px; text-align:right; font-size:1.1rem; }
+  .grand b { color:#2d8f4f; font-size:1.3rem; }
+  .btns { position:fixed; top:10px; right:10px; display:flex; gap:8px; }
+  .btn { padding:10px 18px; border:none; border-radius:10px; background:#5F7D5C; color:#fff; font-size:0.95rem; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
+  .btn.g { background:#fff; color:#5F7D5C; border:1.5px solid #5F7D5C; }
+  @media print { .btns { display:none; } body { padding:0; } }
+</style>
+</head><body>
+<div class="btns">
+  <button class="btn" onclick="window.print()">🖨️ 列印 / 存 PDF</button>
+  <button class="btn g" onclick="window.close()">關閉</button>
+</div>
+<h1>本週團購訂單報表</h1>
+<div class="meta">週期 ${r.weekId}　列印時間 ${new Date().toLocaleString('zh-TW')}</div>
+${customerHtml || '<div style="text-align:center;padding:40px;color:#888;">本週尚無訂單</div>'}
+<div class="grand">🧾 本週總營收 <b>$${grand}</b></div>
+<script>
+  // 桌機自動彈列印；手機讓使用者手動按
+  if (!/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) {
+    setTimeout(() => window.print(), 400);
+  }
+</script>
+</body></html>`;
+  const blob = new Blob([docHtml], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
+  if (!w) {
+    // 彈窗被擋，改成下載
+    const a = document.createElement('a');
+    a.href = url; a.download = `團購報表_${r.weekId}.html`; a.click();
+    alert('列印頁被瀏覽器擋，已改下載 HTML 檔，請打開後按右上角列印');
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 };
 
 window.exportReportCsv = function() {

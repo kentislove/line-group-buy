@@ -27,6 +27,7 @@ function handle(params) {
       case 'setWeekSchedule':   result = setWeekSchedule(params); break;
       case 'uploadImage':       result = uploadImage(params); break;
       case 'seedDemoData':      result = seedDemoData(params); break;
+      case 'deleteOrder':       result = deleteOrder(params); break;
       default: throw new Error('未知的 action：' + action);
     }
     return json({ ok: true, data: result });
@@ -236,6 +237,23 @@ function adminSave(p) {
   const newRow = headers.map(h => data[h] !== undefined ? data[h] : '');
   sh.appendRow(newRow);
   return { inserted: data[idKey] };
+}
+
+// ---------- 後台：整張訂單一次刪（多列同 order_id）----------
+function deleteOrder(p) {
+  requireAuth(p);
+  const sh = sheet('Orders');
+  const rng = sh.getDataRange().getValues();
+  let deleted = 0;
+  // 從下往上刪，索引才不會跑掉
+  for (let i = rng.length - 1; i >= 1; i--) {
+    if (String(rng[i][0]) === String(p.orderId)) {
+      sh.deleteRow(i + 1);
+      deleted++;
+    }
+  }
+  if (!deleted) throw new Error('找不到訂單：' + p.orderId);
+  return { deleted };
 }
 
 // ---------- 後台：刪除一筆 ----------
