@@ -798,13 +798,14 @@ function renderSettings(el) {
   const rows = cache.settings || [];
   const cols = ['key', 'value'];
   const descriptions = {
-    super_admin_password: '超級管理者密碼（您用的）',
-    admin_password: '管理者密碼（團購主用的）',
+    super_admin_password: '超級管理者密碼（您用的；開頭 sha256: 代表已加密）',
+    admin_password: '管理者密碼（團購主用的；開頭 sha256: 代表已加密）',
     line_channel_access_token: 'LINE Messaging API token（進階，付費版用）',
     line_notify_to: 'LINE 官方帳號接收者 userId（進階）',
     site_title: '網站主標題（會顯示在前台 header）',
     site_subtitle: '網站副標題（保留，未來使用）',
-    share_prefix: '客人分享到 LINE 時的訊息開頭'
+    share_prefix: '客人分享到 LINE 時的訊息開頭',
+    turnstile_secret: 'Cloudflare Turnstile Secret Key（啟用後客人要通過人機驗證才能下單）'
   };
   let html = `<div class="card">
     <h3>⚙️ 系統設定</h3>

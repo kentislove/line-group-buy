@@ -161,7 +161,40 @@ document.getElementById('checkoutBtn').onclick = () => {
     + `<div class="item-row"><b>總計</b><b style="color:#06C755;">$${list.reduce((a,b)=>a+b.subtotal,0)}</b></div>`;
   document.getElementById('checkoutItems').innerHTML = html;
   document.getElementById('modal').style.display = 'flex';
+  renderTurnstile();
 };
+
+// Turnstile 人機驗證
+let turnstileToken = '';
+let turnstileWidgetId = null;
+function renderTurnstile() {
+  const key = window.APP_CONFIG.TURNSTILE_SITE_KEY;
+  const slot = document.getElementById('turnstileSlot');
+  if (!key || !slot) { slot && (slot.style.display = 'none'); return; }
+  slot.style.display = 'flex';
+  // 動態載 script
+  if (!window.turnstile) {
+    if (!document.getElementById('turnstileScript')) {
+      const s = document.createElement('script');
+      s.id = 'turnstileScript';
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+      s.async = true; s.defer = true;
+      document.body.appendChild(s);
+    }
+    window.onTurnstileLoad = () => mountTurnstile(key);
+  } else {
+    if (turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+    else mountTurnstile(key);
+  }
+}
+function mountTurnstile(key) {
+  if (!document.getElementById('turnstileSlot')) return;
+  turnstileWidgetId = window.turnstile.render('#turnstileSlot', {
+    sitekey: key,
+    callback: (t) => { turnstileToken = t; },
+    'expired-callback': () => { turnstileToken = ''; }
+  });
+}
 
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
 window.closeModal = closeModal;
@@ -207,8 +240,15 @@ document.getElementById('submitOrderBtn').onclick = async () => {
   const btn = document.getElementById('submitOrderBtn');
   btn.disabled = true; btn.textContent = '送出中…';
   try {
+    // 如果有啟用 Turnstile，必須通過才能送
+    if (window.APP_CONFIG.TURNSTILE_SITE_KEY && !turnstileToken) {
+      alert('請先完成人機驗證');
+      btn.disabled = false; btn.textContent = '確認送出';
+      return;
+    }
     const res = await API.call('submitOrder', {
-      weekId: state.weekId, customerName: name, phone, note, items
+      weekId: state.weekId, customerName: name, phone, note, items,
+      turnstileToken
     });
     const total = items.reduce((a,b)=>a+b.subtotal,0);
     const sharePrefix = state.publicSettings?.share_prefix || window.APP_CONFIG.OWNER_LINE_SHARE_PREFIX;

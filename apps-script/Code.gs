@@ -141,6 +141,10 @@ function submitOrder(p) {
   if (isWeekLocked(weekId)) throw new Error('本週已截止，無法下單');
   if (!p.customerName) throw new Error('請輸入購買人姓名');
   if (!p.items || !p.items.length) throw new Error('購物車是空的');
+  // 驗證 Turnstile token（人機驗證）
+  verifyTurnstile(p.turnstileToken);
+  // 粗略 rate limit：同一人姓名 10 秒內不能重複送單
+  antiFlood(p.customerName);
 
   const sh = sheet('Orders');
   const orderId = 'O' + new Date().getTime();
@@ -158,6 +162,29 @@ function submitOrder(p) {
   return { orderId };
 }
 
+// ---------- 保密：Turnstile 人機驗證 ----------
+function verifyTurnstile(token) {
+  const s = settings();
+  const secret = s.turnstile_secret;
+  if (!secret) return; // 未啟用 Turnstile 就跳過
+  if (!token) throw new Error('請先完成人機驗證');
+  const res = UrlFetchApp.fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'post',
+    payload: { secret: secret, response: token },
+    muteHttpExceptions: true
+  });
+  const d = JSON.parse(res.getContentText());
+  if (!d.success) throw new Error('人機驗證失敗，請重試');
+}
+
+// ---------- 保密：防灌單 ----------
+function antiFlood(customerName) {
+  const cache = CacheService.getScriptCache();
+  const key = 'flood_' + customerName.replace(/\s/g, '');
+  if (cache.get(key)) throw new Error('請稍候再試（避免重複送單）');
+  cache.put(key, '1', 10); // 10 秒
+}
+
 function pushLineToOwner(p, orderId) {
   const s = settings();
   if (!s.line_channel_access_token || !s.line_notify_to) return;
@@ -173,21 +200,68 @@ function pushLineToOwner(p, orderId) {
   });
 }
 
-// ---------- 後台：登入 ----------
+// ---------- 後台：登入（支援明文或 hash 兩種存法） ----------
+function hashPwd(pwd, salt) {
+  const raw = String(pwd) + '|' + (salt || 'line-group-buy-2026');
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw);
+  return Utilities.base64Encode(bytes);
+}
+function pwdMatch(input, stored) {
+  if (!stored) return false;
+  const s = String(stored);
+  // 如果以 "sha256:" 開頭就當作雜湊值比對
+  if (s.indexOf('sha256:') === 0) {
+    return hashPwd(input) === s.substring(7);
+  }
+  // 否則當作明文（向下相容）
+  return String(input) === s;
+}
 function adminLogin(p) {
   const s = settings();
   const pwd = String(p.password);
-  if (pwd === String(s.super_admin_password)) return { role: 'super', token: pwd };
-  if (pwd === String(s.admin_password))       return { role: 'admin', token: pwd };
+  if (pwdMatch(pwd, s.super_admin_password)) return { role: 'super', token: 'sa:' + hashPwd(pwd) };
+  if (pwdMatch(pwd, s.admin_password))       return { role: 'admin', token: 'ad:' + hashPwd(pwd) };
   throw new Error('密碼錯誤');
 }
 function requireAuth(p) {
   const s = settings();
-  const t = String(p.token);
-  if (t !== String(s.super_admin_password) && t !== String(s.admin_password)) {
-    throw new Error('請先登入');
+  const t = String(p.token || '');
+  // token 現在是 prefix + hash（sa:xxx 或 ad:xxx）
+  if (t.indexOf('sa:') === 0) {
+    const hash = t.substring(3);
+    const storedHash = String(s.super_admin_password).indexOf('sha256:') === 0
+      ? String(s.super_admin_password).substring(7)
+      : hashPwd(s.super_admin_password);
+    if (hash === storedHash) return 'super';
   }
-  return t === String(s.super_admin_password) ? 'super' : 'admin';
+  if (t.indexOf('ad:') === 0) {
+    const hash = t.substring(3);
+    const storedHash = String(s.admin_password).indexOf('sha256:') === 0
+      ? String(s.admin_password).substring(7)
+      : hashPwd(s.admin_password);
+    if (hash === storedHash) return 'admin';
+  }
+  // 向下相容：直接比對明文密碼當 token
+  if (t === String(s.super_admin_password)) return 'super';
+  if (t === String(s.admin_password))       return 'admin';
+  throw new Error('請先登入');
+}
+
+// ---------- 把明文密碼轉成 sha256 格式（跑一次） ----------
+function migratePasswordsToHash() {
+  const s = settings();
+  const sh = sheet('Settings');
+  const rng = sh.getDataRange().getValues();
+  let fixed = 0;
+  for (let i = 1; i < rng.length; i++) {
+    const key = rng[i][0];
+    const val = String(rng[i][1] || '');
+    if ((key === 'super_admin_password' || key === 'admin_password') && val && val.indexOf('sha256:') !== 0) {
+      sh.getRange(i + 1, 2).setValue('sha256:' + hashPwd(val));
+      fixed++;
+    }
+  }
+  return '✅ 已將 ' + fixed + ' 組密碼轉成 sha256 格式\n登入方式不變（還是用原本密碼），只是存法變安全了';
 }
 
 // ---------- 後台：取得全部資料 ----------
@@ -240,21 +314,62 @@ function adminSave(p) {
   return { inserted: data[idKey] };
 }
 
-// ---------- 後台：整張訂單一次刪（多列同 order_id）----------
+// ---------- 後台：整張訂單一次刪（多列同 order_id） ----------
+// 刪除前先把資料備份到 Orders_Archive，萬一誤刪可救回
 function deleteOrder(p) {
   requireAuth(p);
   const sh = sheet('Orders');
   const rng = sh.getDataRange().getValues();
+  const headers = rng[0];
+  const archive = ensureArchiveSheet(headers);
   let deleted = 0;
   // 從下往上刪，索引才不會跑掉
   for (let i = rng.length - 1; i >= 1; i--) {
     if (String(rng[i][0]) === String(p.orderId)) {
+      // 先備份到 Orders_Archive，多加一欄 deleted_at
+      const backup = rng[i].concat([Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HH:mm:ss')]);
+      archive.appendRow(backup);
       sh.deleteRow(i + 1);
       deleted++;
     }
   }
   if (!deleted) throw new Error('找不到訂單：' + p.orderId);
   return { deleted };
+}
+function ensureArchiveSheet(headers) {
+  let sh = SS.getSheetByName('Orders_Archive');
+  if (!sh) {
+    sh = SS.insertSheet('Orders_Archive');
+    sh.getRange(1, 1, 1, headers.length + 1).setValues([headers.concat(['deleted_at'])]);
+  }
+  return sh;
+}
+
+// ---------- 自動備份：每週日 23:00 跑一次 ----------
+function weeklyBackup() {
+  const folderName = 'LINE團購代購-備份';
+  let folder;
+  const it = DriveApp.getFoldersByName(folderName);
+  folder = it.hasNext() ? it.next() : DriveApp.createFolder(folderName);
+  const fileName = SS.getName() + ' (' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HHmm') + ')';
+  const copy = DriveApp.getFileById(SS.getId()).makeCopy(fileName, folder);
+  // 保留最近 8 份，太舊的刪掉
+  const files = folder.getFiles();
+  const arr = [];
+  while (files.hasNext()) arr.push(files.next());
+  arr.sort((a, b) => b.getLastUpdated() - a.getLastUpdated());
+  for (let i = 8; i < arr.length; i++) arr[i].setTrashed(true);
+  return copy.getId();
+}
+// 一鍵安裝每週備份觸發器（只要跑一次）
+function installWeeklyBackupTrigger() {
+  // 先清掉舊的
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'weeklyBackup') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('weeklyBackup')
+    .timeBased().everyWeeks(1).onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(23).create();
+  return '✅ 每週日 23:00 會自動備份整份試算表到 Drive「LINE團購代購-備份」資料夾';
 }
 
 // ---------- 後台：刪除一筆 ----------
